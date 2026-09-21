@@ -125,6 +125,15 @@ jobs:
       - name: Pytest
         run: uv run --no-sync pytest test/ -v --basetemp=pytest-tmp --cov=chipcompiler --cov-report=
 
+      - name: Signoff CSV lit gates
+        run: |
+          # Fixture-only lit (no ics55 rtl2gds). jq for materialize.
+          # lit/filecheck versions must match nix/signoff-tools.nix (PyPI pins).
+          command -v jq >/dev/null 2>&1 || yum install -y jq || microdnf install -y jq
+          ECC_REPO_ROOT="$PWD" \
+            uv run --no-sync --with lit==18.1.8 --with filecheck==1.0.6 \
+            bash .github/scripts/ci_signoff_lit.sh
+
       - name: Pytest (agent)
         run: uv run --no-sync pytest agent/test -v --basetemp=pytest-agent-tmp
 
