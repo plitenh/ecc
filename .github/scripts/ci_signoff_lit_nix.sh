@@ -14,8 +14,12 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export ECC_REPO_ROOT="${ECC_REPO_ROOT:-$root}"
 cd "$ECC_REPO_ROOT"
 
-export HOME="${HOME:-/root}"
 export USER="${USER:-$(id -un 2>/dev/null || echo root)}"
+if [ "$(id -u)" -eq 0 ]; then
+  export HOME=/root
+else
+  export HOME="${HOME:-/root}"
+fi
 export PATH="${HOME}/.nix-profile/bin:${PATH}"
 
 # shellcheck disable=SC1091
