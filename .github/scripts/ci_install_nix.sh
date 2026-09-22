@@ -29,8 +29,19 @@ elif command -v microdnf >/dev/null 2>&1; then
   microdnf install -y curl tar xz gzip bzip2 ca-certificates >/dev/null || true
 fi
 
+# Official install script as root tries `sudo mkdir /nix`, but manylinux GHA
+# containers have no sudo. Create /nix ourselves when running as root.
+if [[ ! -d /nix ]]; then
+  if [[ "$(id -u)" -eq 0 ]]; then
+    mkdir -m 0755 /nix
+  else
+    echo "error: /nix missing and not root; cannot create store directory" >&2
+    exit 1
+  fi
+fi
+
 echo "Installing Nix (no-daemon)…"
-# Official script warns on root but still performs a single-user install.
+# Official script warns on root but still performs a single-user install once /nix exists.
 curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon --yes
 
 export PATH="${HOME}/.nix-profile/bin:${PATH}"
