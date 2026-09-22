@@ -196,3 +196,4 @@ task_plan.md
 
 # Stray runtime artifact from cwd-polluted test runs
 /checklist.json
+test/lit/Output/
