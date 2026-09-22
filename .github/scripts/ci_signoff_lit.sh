@@ -13,8 +13,24 @@ export ECC_REPO_ROOT="$root"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export ECC_EXPORT_SIGNOFF_CSV="${ECC_EXPORT_SIGNOFF_CSV:-$here/export_signoff_csv.sh}"
 export ECC_MATERIALIZE_READY="${ECC_MATERIALIZE_READY:-$here/materialize_signoff_workspace.sh}"
-export FILECHECK="${FILECHECK:-filecheck}"
-export LIT="${LIT:-lit}"
+# Prefer LLVM FileCheck from nix; lit from nixpkgs `lit` (or llvm-lit if present).
+if [[ -z "${FILECHECK:-}" ]]; then
+  if command -v FileCheck >/dev/null 2>&1; then
+    FILECHECK=$(command -v FileCheck)
+  else
+    FILECHECK=filecheck
+  fi
+fi
+if [[ -z "${LIT:-}" ]]; then
+  if command -v lit >/dev/null 2>&1; then
+    LIT=$(command -v lit)
+  elif command -v llvm-lit >/dev/null 2>&1; then
+    LIT=$(command -v llvm-lit)
+  else
+    LIT=lit
+  fi
+fi
+export FILECHECK LIT
 
 if [[ -n "${PYTHON:-}" ]]; then
   py="$PYTHON"

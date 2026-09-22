@@ -50,20 +50,23 @@ All six must hold before dropping the trial / v0 label:
 # unit (gate/spec)
 uv run pytest test/test_signoff_csv_export.py -q
 
-# lit (needs lit + filecheck + jq on PATH; versions = nix/signoff-tools.nix)
+# lit — same path as CI (install Nix if needed, then nixpkgs lit + LLVM 23 FileCheck)
 export ECC_REPO_ROOT=$PWD
 export PYTHON=$PWD/.venv/bin/python
-bash .github/scripts/ci_signoff_lit.sh
+bash .github/scripts/ci_install_nix.sh   # no-op if nix already on PATH
+bash .github/scripts/ci_signoff_lit_nix.sh
 
-# or inplace
-lit -v test/lit
-
-# nix (same PyPI lit/filecheck pins as CI)
+# or: nix flake app (lit + FileCheck wrappers)
 nix run .#ci-signoff-lit
+
+# or inplace when lit + FileCheck are already on PATH
+export LIT=lit FILECHECK=FileCheck
+bash .github/scripts/ci_signoff_lit.sh
 ```
 
-Default PR CI runs fixture lit only (no ics55 rtl2gds). Optional packaged path:
-`ECC_TEST_WORKSPACE` + `REQUIRES: packaged-workspace`.
+Default PR CI: install Nix on manylinux → `ci_signoff_lit_nix.sh` (fixture lit
+only, no ics55 rtl2gds). Optional packaged path: `ECC_TEST_WORKSPACE` +
+`REQUIRES: packaged-workspace`.
 
 ## Environment
 
@@ -75,7 +78,8 @@ Default PR CI runs fixture lit only (no ics55 rtl2gds). Optional packaged path:
 | `ECC_SIGNOFF_CSV_SPEC` | Override profile YAML |
 | `ECC_SIGNOFF_RUN_ID` | Stable run id in manifest |
 | `ECC_TEST_WORKSPACE` | Enables packaged-workspace feature |
-| `FILECHECK` / `LIT` | filecheck / lit binaries (PyPI pins) |
+| `FILECHECK` / `LIT` | `FileCheck` (llvmPackages_23.llvm) / `lit` (nixpkgs) |
+| `NIXPKGS_REF` | nixpkgs flake ref for CI lit shell (pinned LLVM 23) |
 
 ## Profile schema (`version: 1`)
 

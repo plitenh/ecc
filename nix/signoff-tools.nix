@@ -1,55 +1,36 @@
-# Pin lit/filecheck from PyPI (small); thin wrappers around .github/scripts/.
+# FileCheck from llvmPackages_23.llvm (tools output of libllvm); lit from nixpkgs
+# `lit` (upstream LLVM Integrated Tester — llvm-lit is not shipped on the
+# llvmPackages_23.llvm bin output in current nixpkgs).
 #
-# Intentionally NOT llvmPackages_*.libllvm: native llvm-lit/FileCheck pulls a
-# large LLVM closure, couples to nixpkgs LLVM major, and diverges from the
-# manylinux CI job (which installs the same PyPI tools). Pin versions here and
-# keep CI `--with lit==… --with filecheck==…` in lockstep.
+# CI (manylinux) installs Nix then nix-shells these two + jq —
+# see .github/scripts/ci_install_nix.sh and ci_signoff_lit_nix.sh.
+# Do not install the PyPI lit/filecheck packages in CI.
 
 {
   lib,
-  python3Packages,
+  lit,
+  llvmPackages_23 ? null,
+  llvmPackages ? null,
   writeShellApplication,
   symlinkJoin,
   jq,
 }:
 
 let
-  filecheckVersion = "1.0.6";
-  filecheck = python3Packages.buildPythonPackage rec {
-    pname = "filecheck";
-    version = filecheckVersion;
-    pyproject = true;
-    src = python3Packages.fetchPypi {
-      inherit pname version;
-      hash = "sha256-xBxR9zOwv9rmcY3KS5T7C99y+rcPNfxo1iv4rGDWRC0=";
-    };
-    build-system = [ python3Packages.poetry-core ];
-    pythonImportsCheck = [ "filecheck" ];
-    meta = {
-      description = "Python-native clone of LLVM FileCheck";
-      mainProgram = "filecheck";
-      homepage = "https://github.com/AntonLydike/filecheck";
-      license = lib.licenses.asl20;
-    };
-  };
+  llvmPkgs =
+    if llvmPackages_23 != null then llvmPackages_23
+    else if llvmPackages != null then llvmPackages
+    else throw "signoff-tools: pass llvmPackages_23 or llvmPackages";
 
-  litVersion = "18.1.8";
-  lit = python3Packages.buildPythonPackage rec {
-    pname = "lit";
-    version = litVersion;
-    pyproject = true;
-    src = python3Packages.fetchPypi {
-      inherit pname version;
-      hash = "sha256-R8F0oYaUGugw8E3tdqNERgC+Z9Xl+4KCw3g/umccTts=";
-    };
-    build-system = [ python3Packages.setuptools ];
-    doCheck = false;
-    meta = {
-      description = "LLVM Integrated Tester";
-      mainProgram = "lit";
-      homepage = "https://llvm.org/docs/CommandGuide/lit.html";
-      license = lib.licenses.ncsa;
-    };
+  # FileCheck lives on the tools output (`.llvm`), not bare `.libllvm`.
+  llvm = llvmPkgs.llvm;
+
+  filecheck = writeShellApplication {
+    name = "filecheck";
+    runtimeInputs = [ llvm ];
+    text = ''
+      exec FileCheck "$@"
+    '';
   };
 
   exportCsvSh = ../.github/scripts/export_signoff_csv.sh;
@@ -68,7 +49,11 @@ let
 
   ci-signoff-lit = writeShellApplication {
     name = "ci-signoff-lit";
-    runtimeInputs = [ lit filecheck jq ];
+    runtimeInputs = [
+      lit
+      filecheck
+      jq
+    ];
     text = ''
       root="''${ECC_REPO_ROOT:-$PWD}"
       export ECC_REPO_ROOT="$root"
@@ -85,10 +70,22 @@ let
 
   signoff-tools = symlinkJoin {
     name = "ecc-signoff-tools";
-    paths = [ lit filecheck ci-signoff-lit jq ];
-    meta.description = "lit ${litVersion} + filecheck ${filecheckVersion}; run via ci-signoff-lit";
+    paths = [
+      lit
+      filecheck
+      ci-signoff-lit
+      jq
+    ];
+    meta.description = "nixpkgs lit + FileCheck (llvmPackages_23.llvm); run via ci-signoff-lit";
   };
 in
 {
-  inherit filecheck filecheckVersion lit litVersion ci-run-ics55-gcd ci-signoff-lit signoff-tools;
+  inherit
+    filecheck
+    lit
+    ci-run-ics55-gcd
+    ci-signoff-lit
+    signoff-tools
+    ;
+  llvmPackages = llvmPkgs;
 }

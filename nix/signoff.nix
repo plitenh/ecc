@@ -1,9 +1,16 @@
 # Flake surface: pins/apps only; ops in .github/scripts, tests in test/lit.
+# lit/FileCheck come from llvmPackages_23 (see signoff-tools.nix).
 
 { pkgs }:
 
 let
-  tools = pkgs.callPackage ./signoff-tools.nix { };
+  llvmPackages_23 =
+    if pkgs ? llvmPackages_23 then pkgs.llvmPackages_23
+    else null;
+  llvmPackages = pkgs.llvmPackages or pkgs.llvmPackages_21 or pkgs.llvmPackages_19;
+  tools = pkgs.callPackage ./signoff-tools.nix {
+    inherit llvmPackages_23 llvmPackages;
+  };
 in
 {
   packages = {
@@ -25,7 +32,10 @@ in
     };
   };
 
-  nativeBuildInputs = [ tools.signoff-tools tools.ci-run-ics55-gcd ];
+  nativeBuildInputs = [
+    tools.signoff-tools
+    tools.ci-run-ics55-gcd
+  ];
 
   shellHook = ''
     export ECC_REPO_ROOT="$PWD"
