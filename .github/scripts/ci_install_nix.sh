@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 # Install Nix in the CI container when missing (manylinux has no Nix by default).
-# Single-user / --no-daemon: reliable as root without systemd in GHA containers.
+# Single-user / --no-daemon: GHA manylinux runs as root without sudo/systemd/nixbld.
 #
 # Usage: bash .github/scripts/ci_install_nix.sh
 
 set -euo pipefail
 
-# nix.sh only exports PATH when both HOME and USER are set (non-interactive CI
-# often has an empty USER inside the manylinux container).
-export HOME="${HOME:-/root}"
+# GHA containers often set HOME=/github/home (not owned by root). Force a
+# real home so the installer can write ~/.nix-profile.
 export USER="${USER:-$(id -un 2>/dev/null || echo root)}"
+if [[ "$(id -u)" -eq 0 ]]; then
+  export HOME=/root
+else
+  export HOME="${HOME:-/home/${USER}}"
+fi
 
 nix_profile_bin="${HOME}/.nix-profile/bin"
 if [[ -x "${nix_profile_bin}/nix" ]]; then
@@ -24,13 +28,12 @@ fi
 
 # Common manylinux gaps for the official installer.
 if command -v yum >/dev/null 2>&1; then
-  yum install -y curl tar xz gzip bzip2 ca-certificates >/dev/null || true
+  yum install -y curl tar xz gzip bzip2 ca-certificates shadow-utils >/dev/null || true
 elif command -v microdnf >/dev/null 2>&1; then
-  microdnf install -y curl tar xz gzip bzip2 ca-certificates >/dev/null || true
+  microdnf install -y curl tar xz gzip bzip2 ca-certificates shadow-utils >/dev/null || true
 fi
 
-# Official install script as root tries `sudo mkdir /nix`, but manylinux GHA
-# containers have no sudo. Create /nix ourselves when running as root.
+# Official install script as root tries `sudo mkdir /nix`; manylinux has no sudo.
 if [[ ! -d /nix ]]; then
   if [[ "$(id -u)" -eq 0 ]]; then
     mkdir -m 0755 /nix
@@ -40,8 +43,20 @@ if [[ ! -d /nix ]]; then
   fi
 fi
 
-echo "Installing Nix (no-daemon)…"
-# Official script warns on root but still performs a single-user install once /nix exists.
+# Single-user/root installs must not require the nixbld build-users group
+# (default nix.conf points at it; CI containers do not create it).
+mkdir -p /etc/nix "${HOME}/.config/nix"
+for conf in /etc/nix/nix.conf "${HOME}/.config/nix/nix.conf"; do
+  if [[ ! -f "$conf" ]] || ! grep -q '^build-users-group' "$conf"; then
+    {
+      echo 'build-users-group ='
+      echo 'experimental-features = nix-command flakes'
+    } >>"$conf"
+  fi
+done
+
+echo "Installing Nix (no-daemon) as ${USER} HOME=${HOME}…"
+# Official script warns on root but proceeds once /nix exists and build-users-group is empty.
 curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon --yes
 
 export PATH="${HOME}/.nix-profile/bin:${PATH}"
@@ -57,14 +72,6 @@ if ! command -v nix >/dev/null 2>&1; then
   echo "HOME=$HOME USER=$USER" >&2
   ls -la "${HOME}/.nix-profile/bin" 2>&1 || true
   exit 1
-fi
-
-mkdir -p "${HOME}/.config/nix"
-conf="${HOME}/.config/nix/nix.conf"
-if [[ ! -f "$conf" ]] || ! grep -q 'experimental-features' "$conf"; then
-  cat >>"$conf" <<'EOF'
-experimental-features = nix-command flakes
-EOF
 fi
 
 nix --version
