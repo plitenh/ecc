@@ -1,0 +1,57 @@
+# Draft: platform matrix for signoff CSV lit gates (Nix lit + FileCheck).
+# Phase 1: ubuntu-latest only. Extend matrix.include for more OSes later.
+name: Signoff lit matrix
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'draft/ci-matrix-*'
+  pull_request:
+    paths:
+      - 'nix/**'
+      - 'test/lit/**'
+      - 'test/test_signoff_csv_export.py'
+      - 'pyproject.toml'
+      - '.github/workflows/ci-signoff-lit-matrix.yml'
+      - '.github/actions/**'
+
+concurrency:
+  group: signoff-lit-matrix-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  signoff-lit:
+    name: lit (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            # Future: macos-latest, windows not planned (Nix FileCheck path is Unix).
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python dependencies
+        uses: ./.github/actions/setup-python-deps
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          # Same pin as nix/ci_signoff_lit_nix.sh (llvmPackages_23 / FileCheck).
+          nix_path: nixpkgs=github:NixOS/nixpkgs/44a91898084f46797b5fac650c7e8c9ac38c43d4
+
+      - name: Signoff CSV lit gates
+        run: |
+          # Ubuntu host (not manylinux): Nix via install-nix-action + libllvm FileCheck.
+          ECC_REPO_ROOT="$PWD" bash nix/ci_signoff_lit_nix.sh
+
+      - name: Unit tests (csv gates)
+        run: uv run --no-sync pytest test/test_signoff_csv_export.py -q

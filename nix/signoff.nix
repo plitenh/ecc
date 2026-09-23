@@ -1,4 +1,4 @@
-# Flake surface: pins/apps only; ops in .github/scripts, tests in test/lit.
+# Flake surface: pins/apps only; ops in nix/, tests in test/lit.
 # Requires pkgs.llvmPackages_23 (no version fallbacks).
 
 { pkgs }:
