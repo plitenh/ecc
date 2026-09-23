@@ -163,17 +163,12 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-<<<<<<< Updated upstream
-  build-pyinstaller:
-    name: Build PyInstaller Bundle
-=======
   # Produce / publish packaged ecc CLI.
   # - main / release / workflow_dispatch: rebuild PyInstaller (manylinux).
   # - pull_request / other topic pushes: reuse last successful main artifact (no rebuild).
   build-pyinstaller:
     name: Build PyInstaller Bundle
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
->>>>>>> Stashed changes
     needs: check-version
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_34_x86_64
