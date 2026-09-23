@@ -1,0 +1,103 @@
+name: Download ecc CLI artifact
+description: >
+  Download the packaged ecc CLI (ecc-cli-linux-x86_64) from a previous
+  successful CI run instead of rebuilding PyInstaller.
+
+inputs:
+  repository:
+    description: GitHub repo that owns the CI artifact (owner/name).
+    required: false
+    default: ""
+  branch:
+    description: Branch whose successful CI runs are searched.
+    required: false
+    default: main
+  artifact-name:
+    description: Actions artifact name.
+    required: false
+    default: ecc-cli-linux-x86_64
+  output-dir:
+    description: Directory to download the artifact into.
+    required: false
+    default: dist/ecc-cli-download
+  output-path:
+    description: Path to place the ecc.tar (or ecc-cli tarball) for upload reuse.
+    required: false
+    default: dist/ecc.tar
+
+runs:
+  using: composite
+  steps:
+    - name: Download previous ecc-cli CI artifact
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        INPUT_REPOSITORY: ${{ inputs.repository }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
+      run: |
+        set -euo pipefail
+
+        if ! command -v gh >/dev/null 2>&1; then
+          echo "::error::gh is required to download CI artifacts"
+          exit 1
+        fi
+
+        repo="${INPUT_REPOSITORY}"
+        if [[ -z "$repo" ]]; then
+          repo="${GITHUB_REPOSITORY}"
+        fi
+        branch="${INPUT_BRANCH}"
+        artifact_name="${INPUT_ARTIFACT_NAME}"
+        output_dir="${INPUT_OUTPUT_DIR}"
+        output_path="${INPUT_OUTPUT_PATH}"
+
+        run_id="$(
+          gh api "repos/${repo}/actions/workflows/ci.yml/runs?branch=${branch}&status=success&per_page=20" \
+            --jq '[.workflow_runs[] | select(.conclusion == "success") | .id][0] // empty'
+        )"
+        if [[ -z "$run_id" ]]; then
+          echo "::error::No successful ${repo} CI run on ${branch} with artifacts"
+          exit 1
+        fi
+
+        rm -rf "$output_dir"
+        mkdir -p "$output_dir"
+        echo "Downloading ${artifact_name} from ${repo} CI run ${run_id} (branch ${branch})"
+        gh run download "$run_id" \
+          --repo "$repo" \
+          --name "$artifact_name" \
+          --dir "$output_dir"
+
+        archive="$(
+          find "$output_dir" \( \
+            -name 'ecc.tar' -o \
+            -name 'ecc-cli-linux-x86_64.tar.gz' -o \
+            -name '*.tar' -o \
+            -name '*.tar.gz' \
+          \) -type f -print | head -n 1
+        )"
+        if [[ -z "$archive" ]]; then
+          echo "::error::No tar archive found under ${output_dir}"
+          ls -laR "$output_dir" >&2 || true
+          exit 1
+        fi
+
+        mkdir -p "$(dirname "$output_path")"
+        case "$archive" in
+          *.tar.gz|*.tgz)
+            # Normalize to ecc.tar for the same upload path as the build job.
+            tmp="$(mktemp -d)"
+            tar -xzf "$archive" -C "$tmp"
+            tar -cf "$output_path" -C "$tmp" .
+            rm -rf "$tmp"
+            ;;
+          *)
+            cp -f "$archive" "$output_path"
+            ;;
+        esac
+
+        echo "Wrote ${output_path} from ${archive}"
+        ls -la "$output_path"

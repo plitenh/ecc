@@ -163,8 +163,17 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+<<<<<<< Updated upstream
   build-pyinstaller:
     name: Build PyInstaller Bundle
+=======
+  # Produce / publish packaged ecc CLI.
+  # - main / release / workflow_dispatch: rebuild PyInstaller (manylinux).
+  # - pull_request / other topic pushes: reuse last successful main artifact (no rebuild).
+  build-pyinstaller:
+    name: Build PyInstaller Bundle
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+>>>>>>> Stashed changes
     needs: check-version
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_34_x86_64
@@ -203,6 +212,30 @@ jobs:
         with:
           name: ecc-cli-linux-x86_64
           if-no-files-found: ignore
+          path: |
+            dist/ecc.tar
+
+  reuse-ecc-cli:
+    name: Reuse packaged ecc CLI
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/release/'))
+    needs: check-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download previous ecc-cli artifact
+        uses: ./.github/actions/download-ecc-cli
+        with:
+          repository: ${{ github.event.pull_request.base.repo.full_name || github.repository }}
+          branch: main
+          output-path: dist/ecc.tar
+
+      - name: Upload PyInstaller artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecc-cli-linux-x86_64
+          if-no-files-found: error
           path: |
             dist/ecc.tar
 
