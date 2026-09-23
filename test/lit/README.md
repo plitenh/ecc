@@ -50,10 +50,9 @@ All six must hold before dropping the trial / v0 label:
 # unit (gate/spec)
 uv run pytest test/test_signoff_csv_export.py -q
 
-# lit — same path as CI (install Nix if needed, then nixpkgs lit + LLVM 23 FileCheck)
+# lit — same path as CI (needs Nix on PATH, then nixpkgs lit + LLVM 23 FileCheck)
 export ECC_REPO_ROOT=$PWD
 export PYTHON=$PWD/.venv/bin/python
-bash .github/scripts/ci_install_nix.sh   # no-op if nix already on PATH
 bash .github/scripts/ci_signoff_lit_nix.sh
 
 # or: nix flake app (lit + FileCheck wrappers)
@@ -64,9 +63,9 @@ export LIT=lit FILECHECK=FileCheck
 bash .github/scripts/ci_signoff_lit.sh
 ```
 
-Default PR CI: install Nix on manylinux → `ci_signoff_lit_nix.sh` (fixture lit
-only, no ics55 rtl2gds). Optional packaged path: `ECC_TEST_WORKSPACE` +
-`REQUIRES: packaged-workspace`.
+Default PR CI: Determinate Nix install (`--init none`) on manylinux →
+`ci_signoff_lit_nix.sh` (fixture lit only, no ics55 rtl2gds). Optional packaged
+path: `ECC_TEST_WORKSPACE` + `REQUIRES: packaged-workspace`.
 
 ## Environment
 

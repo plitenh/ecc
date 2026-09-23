@@ -14,12 +14,8 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export ECC_REPO_ROOT="${ECC_REPO_ROOT:-$root}"
 cd "$ECC_REPO_ROOT"
 
+export HOME="${HOME:-/root}"
 export USER="${USER:-$(id -un 2>/dev/null || echo root)}"
-if [ "$(id -u)" -eq 0 ]; then
-  export HOME=/root
-else
-  export HOME="${HOME:-/root}"
-fi
 export PATH="${HOME}/.nix-profile/bin:${PATH}"
 
 # shellcheck disable=SC1091
@@ -33,13 +29,11 @@ elif [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
 fi
 
 if ! command -v nix >/dev/null 2>&1; then
-  echo "error: nix not found; run ci_install_nix.sh first" >&2
+  echo "error: nix not found on PATH (install Nix first)" >&2
   exit 1
 fi
 
-# Pin a nixpkgs that provides llvmPackages_23 (CI must not float on channels).
-# Independent of the main flake chipcompiler nixpkgs pin (which tops out at LLVM 21).
-# Resolved from nixos-unstable when llvmPackages_23.llvm.name == llvm-23.1.0.
+# Locked nixpkgs rev (llvmPackages_23 / FileCheck). Keep in sync with local docs if you change it.
 NIXPKGS_REF="${NIXPKGS_REF:-github:NixOS/nixpkgs/44a91898084f46797b5fac650c7e8c9ac38c43d4}"
 if [[ -x "$ECC_REPO_ROOT/.venv/bin/python" ]]; then
   export PYTHON="${PYTHON:-$ECC_REPO_ROOT/.venv/bin/python}"

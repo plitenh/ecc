@@ -12,7 +12,6 @@ if [[ -n "${PYTHON:-}" ]]; then py="$PYTHON"
 elif [[ -x "$root/.venv/bin/python" ]]; then py="$root/.venv/bin/python"
 else py="python3"; fi
 
-export PYTHONPATH="$root${PYTHONPATH:+:$PYTHONPATH}"
 export ECC_REPO_ROOT="$root"
 
 # Allow ECC_SIGNOFF_CSV_SPEC when --spec omitted (lit / CI convenience).

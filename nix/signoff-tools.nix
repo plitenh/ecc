@@ -1,29 +1,15 @@
-# FileCheck from llvmPackages_23.llvm (tools output of libllvm); lit from nixpkgs
-# `lit` (upstream LLVM Integrated Tester — llvm-lit is not shipped on the
-# llvmPackages_23.llvm bin output in current nixpkgs).
-#
-# CI (manylinux) installs Nix then nix-shells these two + jq —
-# see .github/scripts/ci_install_nix.sh and ci_signoff_lit_nix.sh.
-# Do not install the PyPI lit/filecheck packages in CI.
+# lit + FileCheck from llvmPackages_23.llvm. Caller must pass llvmPackages_23.
 
 {
-  lib,
   lit,
-  llvmPackages_23 ? null,
-  llvmPackages ? null,
+  llvmPackages_23,
   writeShellApplication,
   symlinkJoin,
   jq,
 }:
 
 let
-  llvmPkgs =
-    if llvmPackages_23 != null then llvmPackages_23
-    else if llvmPackages != null then llvmPackages
-    else throw "signoff-tools: pass llvmPackages_23 or llvmPackages";
-
-  # FileCheck lives on the tools output (`.llvm`), not bare `.libllvm`.
-  llvm = llvmPkgs.llvm;
+  llvm = llvmPackages_23.llvm;
 
   filecheck = writeShellApplication {
     name = "filecheck";
@@ -76,7 +62,7 @@ let
       ci-signoff-lit
       jq
     ];
-    meta.description = "nixpkgs lit + FileCheck (llvmPackages_23.llvm); run via ci-signoff-lit";
+    meta.description = "lit + FileCheck (llvmPackages_23); run via ci-signoff-lit";
   };
 in
 {
@@ -87,5 +73,4 @@ in
     ci-signoff-lit
     signoff-tools
     ;
-  llvmPackages = llvmPkgs;
 }
