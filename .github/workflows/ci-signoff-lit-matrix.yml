@@ -1,5 +1,7 @@
 # Draft: platform matrix for signoff CSV lit gates (Nix lit + FileCheck).
 # Phase 1: ubuntu-latest only. Extend matrix.include for more OSes later.
+#
+# Note: do not reuse setup-python-deps here — that action assumes manylinux (dnf).
 name: Signoff lit matrix
 
 on:
@@ -21,6 +23,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -32,25 +35,66 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            # Future: macos-latest, windows not planned (Nix FileCheck path is Unix).
+            # Future: macos-latest (Nix FileCheck path is Unix).
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Setup Python dependencies
-        uses: ./.github/actions/setup-python-deps
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: latest
+          enable-cache: "true"
+
+      - name: Setup Python + project deps (ubuntu)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          uv python install 3.11
+          uv venv --python 3.11 --managed-python
+
+          mkdir -p dist/native-wheels
+          download_wheel_artifact() {
+            local repo="$1"
+            local submodule_path="$2"
+            local artifact_name="$3"
+            local commit run_id
+            commit="$(git rev-parse "HEAD:${submodule_path}")"
+            run_id="$(
+              gh api "repos/${repo}/actions/workflows/ci.yml/runs?head_sha=${commit}&per_page=20" \
+                --jq '[.workflow_runs[] | select(.conclusion == "success") | .id][0] // empty'
+            )"
+            if [ -z "$run_id" ]; then
+              echo "::error::No successful CI artifact for ${repo} @ ${commit}"
+              exit 1
+            fi
+            echo "Downloading ${artifact_name} from ${repo} run ${run_id}"
+            gh run download "$run_id" --repo "$repo" --name "$artifact_name" --dir dist/native-wheels
+          }
+
+          download_wheel_artifact \
+            "openecos-projects/ecc-dreamplace" \
+            "chipcompiler/thirdparty/ecc-dreamplace" \
+            "ecc-dreamplace-wheel"
+          download_wheel_artifact \
+            "openecos-projects/ecc-tools" \
+            "chipcompiler/thirdparty/ecc-tools" \
+            "ecc-tools-wheel"
+
+          uv pip install --python .venv/bin/python --no-deps dist/native-wheels/*.whl
+          uv sync --frozen --all-groups --python 3.11 --managed-python --inexact \
+            --no-install-package ecc-dreamplace \
+            --no-install-package ecc-tools-bin
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
-        with:
-          # Same pin as nix/ci_signoff_lit_nix.sh (llvmPackages_23 / FileCheck).
-          nix_path: nixpkgs=github:NixOS/nixpkgs/44a91898084f46797b5fac650c7e8c9ac38c43d4
 
       - name: Signoff CSV lit gates
         run: |
-          # Ubuntu host (not manylinux): Nix via install-nix-action + libllvm FileCheck.
+          # Ubuntu host: Nix via install-nix-action + llvmPackages_23.libllvm FileCheck.
           ECC_REPO_ROOT="$PWD" bash nix/ci_signoff_lit_nix.sh
 
       - name: Unit tests (csv gates)
