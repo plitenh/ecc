@@ -63,9 +63,13 @@ export LIT=lit FILECHECK=FileCheck
 bash nix/ci_signoff_lit.sh
 ```
 
-Default PR CI: Determinate Nix install (`--init none`) on manylinux →
-`nix/ci_signoff_lit_nix.sh` (fixture lit only, no ics55 rtl2gds). Optional packaged
-path: `ECC_TEST_WORKSPACE` + `REQUIRES: packaged-workspace`.
+Default PR CI: `cachix/install-nix-action` + Determinate magic Nix cache on
+manylinux → `nix/ci_signoff_lit_nix.sh` (fixture lit only, no ics55 rtl2gds).
+Optional packaged path: `ECC_TEST_WORKSPACE` + `REQUIRES: packaged-workspace`.
+
+Packaged rtl2gds driver (optional, not default PR CI): `nix/run_design.sh`
+(`nix run .#run-design`), default `--design ics55-gcd`; more IP presets land
+here when fixtures exist (`--ecc-toml` / `--rtl` for ad-hoc designs).
 
 ## Environment
 
