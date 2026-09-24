@@ -2,7 +2,9 @@
 # Install Nix in the CI container when missing (manylinux has no Nix by default).
 # Single-user / --no-daemon: GHA manylinux runs as root without sudo/systemd/nixbld.
 #
-# Usage: bash .github/scripts/ci_install_nix.sh
+# Usage: bash nix/scripts/install_nix.sh
+#
+# Official installer: https://nixos.org/nix/install (--no-daemon).
 
 set -euo pipefail
 

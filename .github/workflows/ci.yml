@@ -126,13 +126,13 @@ jobs:
         run: uv run --no-sync pytest test/ -v --basetemp=pytest-tmp --cov=chipcompiler --cov-report=
 
       - name: Install Nix
-        run: bash .github/scripts/ci_install_nix.sh
+        run: bash nix/scripts/install_nix.sh
 
       - name: Signoff CSV lit gates
         run: |
           # Fixture-only lit (no ics55 rtl2gds).
           # lit from nixpkgs; FileCheck from llvmPackages_23.libllvm (not PyPI).
-          # Official nixos.org installer via ci_install_nix.sh (manylinux: no sudo/daemon).
+          # Official nixos.org installer via nix/scripts/install_nix.sh (manylinux: no sudo/daemon).
           # Parallel-with-pytest reorder (after PyInstaller) deferred until CI is stable.
           ECC_REPO_ROOT="$PWD" bash nix/ci_signoff_lit_nix.sh
 
