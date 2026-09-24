@@ -1,39 +1,33 @@
-# Flake surface: pins/apps only; ops in .github/scripts, tests in test/lit.
-# Requires pkgs.llvmPackages_23 (no version fallbacks).
+# flake-parts module: signoff lit packages/apps.
+# See https://flake.parts/options/flake-parts-modules.html (imports into mkFlake).
 
-{ pkgs }:
-
-let
-  tools = pkgs.callPackage ./signoff-tools.nix {
-    llvmPackages_23 = pkgs.llvmPackages_23;
-  };
-in
+{ ... }:
 {
-  packages = {
-    filecheck = tools.filecheck;
-    lit = tools.lit;
-    signoff-tools = tools.signoff-tools;
-    ci-run-ics55-gcd = tools.ci-run-ics55-gcd;
-    ci-signoff-lit = tools.ci-signoff-lit;
-  };
+  perSystem =
+    { pkgs, ... }:
+    let
+      tools = pkgs.callPackage ./signoff-tools.nix {
+        llvmPackages_23 = pkgs.llvmPackages_23;
+      };
+    in
+    {
+      packages = {
+        filecheck = tools.filecheck;
+        lit = tools.lit;
+        signoff-tools = tools.signoff-tools;
+        run-design = tools.run-design;
+        ci-signoff-lit = tools.ci-signoff-lit;
+      };
 
-  apps = {
-    ci-signoff-lit = {
-      type = "app";
-      program = "${tools.ci-signoff-lit}/bin/ci-signoff-lit";
+      apps = {
+        ci-signoff-lit = {
+          type = "app";
+          program = "${tools.ci-signoff-lit}/bin/ci-signoff-lit";
+        };
+        run-design = {
+          type = "app";
+          program = "${tools.run-design}/bin/run-design";
+        };
+      };
     };
-    ci-run-ics55-gcd = {
-      type = "app";
-      program = "${tools.ci-run-ics55-gcd}/bin/ci-run-ics55-gcd";
-    };
-  };
-
-  nativeBuildInputs = [
-    tools.signoff-tools
-    tools.ci-run-ics55-gcd
-  ];
-
-  shellHook = ''
-    export ECC_REPO_ROOT="$PWD"
-  '';
 }

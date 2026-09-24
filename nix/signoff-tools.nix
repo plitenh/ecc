@@ -22,15 +22,15 @@ let
 
   exportCsvSh = ./export_signoff_csv.sh;
   materializeSh = ./materialize_signoff_workspace.sh;
-  ciRunSh = ./ci_run_ics55_gcd.sh;
+  runDesignSh = ./run_design.sh;
   ciSignoffLitSh = ./ci_signoff_lit.sh;
 
-  ci-run-ics55-gcd = writeShellApplication {
-    name = "ci-run-ics55-gcd";
+  run-design = writeShellApplication {
+    name = "run-design";
     text = ''
       root="''${ECC_REPO_ROOT:-$PWD}"
       export ECC_REPO_ROOT="$root"
-      exec bash ${ciRunSh} "$@"
+      exec bash ${runDesignSh} "$@"
     '';
   };
 
@@ -70,7 +70,7 @@ in
   inherit
     filecheck
     lit
-    ci-run-ics55-gcd
+    run-design
     ci-signoff-lit
     signoff-tools
     ;
