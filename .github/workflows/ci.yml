@@ -33,7 +33,6 @@ concurrency:
 permissions:
   actions: read
   contents: read
-  id-token: write
 
 jobs:
   check-version:
