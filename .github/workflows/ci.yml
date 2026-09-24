@@ -126,13 +126,22 @@ jobs:
         run: uv run --no-sync pytest test/ -v --basetemp=pytest-tmp --cov=chipcompiler --cov-report=
 
       - name: Install Nix
-        run: bash nix/scripts/install_nix.sh
+        run: |
+          # Official installer (nixos.org). manylinux: root, no sudo/systemd/nixbld.
+          export HOME=/root USER="${USER:-root}"
+          mkdir -p /nix /etc/nix "$HOME/.config/nix"
+          printf '%s\n' 'build-users-group =' 'experimental-features = nix-command flakes' \
+            | tee -a /etc/nix/nix.conf "$HOME/.config/nix/nix.conf" >/dev/null
+          curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon --yes
+          # shellcheck disable=SC1091
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+          echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
+          nix --version
 
       - name: Signoff CSV lit gates
         run: |
           # Fixture-only lit (no ics55 rtl2gds).
           # lit from nixpkgs; FileCheck from llvmPackages_23.libllvm (not PyPI).
-          # Official nixos.org installer via nix/scripts/install_nix.sh (manylinux: no sudo/daemon).
           # Parallel-with-pytest reorder (after PyInstaller) deferred until CI is stable.
           ECC_REPO_ROOT="$PWD" bash nix/ci_signoff_lit_nix.sh
 
