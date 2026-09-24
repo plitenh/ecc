@@ -127,9 +127,11 @@ jobs:
         run: uv run --no-sync pytest test/ -v --basetemp=pytest-tmp --cov=chipcompiler --cov-report=
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
+        uses: DeterminateSystems/nix-installer-action@v19
         with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          # manylinux container: root but no sudo/systemd (cachix/install-nix-action needs sudo).
+          init: none
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Magic Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v15
