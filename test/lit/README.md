@@ -63,8 +63,8 @@ export LIT=lit FILECHECK=FileCheck
 bash nix/ci_signoff_lit.sh
 ```
 
-Default PR CI: official Nix installer (`nixos.org/nix/install --no-daemon` via
-`nix/scripts/install_nix.sh`) on manylinux → `nix/ci_signoff_lit_nix.sh`
+Default PR CI: official Nix installer (`nixos.org/nix/install --no-daemon`,
+inlined in the Test job) on manylinux → `nix/ci_signoff_lit_nix.sh`
 (fixture lit only, no ics55 rtl2gds). Optional packaged path:
 `ECC_TEST_WORKSPACE` + `REQUIRES: packaged-workspace`.
 
