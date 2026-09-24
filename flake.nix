@@ -152,22 +152,19 @@
       meta.mainProgram = "ecc";
     };
   in flake-parts.lib.mkFlake { inherit inputs; } {
+    imports = [ ./nix/signoff.nix ];
     systems = [ "x86_64-linux" ];
-    perSystem = { self', pkgs, system, ... }:
-      let
-        signoff = import ./nix/signoff.nix { inherit pkgs; };
-      in {
-      packages = {
-        default = pkgs.callPackage chipcompiler {
-          ecc-dreamplace = ecc-dreamplace.packages.${system}.default;
-          ecc-tools = ecc-tools.packages.${system}.default;
-          jsonrpcserver = pkgs.callPackage jsonrpcserver { oslash = pkgs.callPackage oslash {}; };
-          rosettakit = pkgs.callPackage rosettakit {};
-          yosysWithSlang = infra.packages.${system}.yosysWithSlang;
-        };
-      } // signoff.packages;
+    perSystem = { self', pkgs, system, config, ... }: {
+      packages.default = pkgs.callPackage chipcompiler {
+        ecc-dreamplace = ecc-dreamplace.packages.${system}.default;
+        ecc-tools = ecc-tools.packages.${system}.default;
+        jsonrpcserver = pkgs.callPackage jsonrpcserver { oslash = pkgs.callPackage oslash {}; };
+        rosettakit = pkgs.callPackage rosettakit {};
+        yosysWithSlang = infra.packages.${system}.yosysWithSlang;
+      };
 
-      apps = signoff.apps;
+      # signoff packages/apps come from imports = [ ./nix/signoff.nix ]
+      # (flake-parts merges perSystem attrsets).
 
       devShells.default = pkgs.mkShell.override {
         stdenv = pkgs.ccacheStdenv;
@@ -186,10 +183,14 @@
         nativeBuildInputs = ecc-dreamplace.packages.${system}.default.rawNativeBuildInputs ++
           ecc-tools.packages.${system}.default.rawNativeBuildInputs ++ (with pkgs; [
             uv
-          ]) ++ signoff.nativeBuildInputs;
+          ]) ++ [
+            config.packages.signoff-tools
+            config.packages.run-design
+          ];
         shellHook = ''
           export CCACHE_DIR="$PWD/.ccache"
-        '' + signoff.shellHook;
+          export ECC_REPO_ROOT="$PWD"
+        '';
       };
     };
   };
