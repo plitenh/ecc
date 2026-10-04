@@ -10,6 +10,7 @@ from chipcompiler.engine.snapshot_limits import (
 _REVIEW_GROUPS: tuple[tuple[str, str], ...] = (
     ("initial", "Initial"),
     ("config", "Config"),
+    ("cts", "CTS"),
     ("harden", "Harden"),
     ("final_design", "Final Design"),
     ("sta", "STA"),
@@ -164,6 +165,8 @@ def _group_for(item: dict) -> str:
         return "config"
     if category == "provenance" or path.startswith(("origin/", "initial/")):
         return "initial"
+    if step == "CTS" or path.startswith("CTS_ecc/"):
+        return "cts"
     if step == "Harden" or path.startswith(("Harden_ecc/", "harden/")):
         return "harden"
     if step == "sta" or path.startswith(("sta_ecc/", "final/timing/sta/")):
