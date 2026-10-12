@@ -17,6 +17,7 @@ def inspect(command_input, ctx: CommandContext) -> CommandResult:
         {
             "signoff": "inspect",
             "status": review.get("status", "blocked"),
+            "readiness": review.get("readiness", "MISS"),
             "workspace": workspace_display(command_input, ctx),
             "export": disclosure_cmd("ecc signoff export -o <path>", project, ctx.run_id),
             "report": disclosure_cmd("ecc report summary", project, ctx.run_id),
@@ -31,6 +32,17 @@ def inspect(command_input, ctx: CommandContext) -> CommandResult:
                 "available": group.get("available"),
                 "expected": group.get("expected"),
                 "summary": group.get("summary"),
+            }
+        )
+    for item in review.get("items") or []:
+        records.append(
+            {
+                "item": item.get("id", ""),
+                "state": item.get("state", ""),
+                "blocked": item.get("blocked"),
+                "policy": item.get("policy", ""),
+                "owner": item.get("owner", ""),
+                "title": item.get("title", ""),
             }
         )
     for risk in review.get("risks", []):

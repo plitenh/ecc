@@ -32,6 +32,7 @@ def workspace_stub(monkeypatch):
 
 REVIEW = {
     "status": "attention",
+    "readiness": "WARN",
     "groups": [
         {
             "id": "harden",
@@ -56,6 +57,24 @@ REVIEW = {
             "title": "STA report missing",
             "summary": "one corner lacks reports",
             "details": [{"location": "sta_ecc/report/MAX_125", "reason": "file missing"}],
+        },
+    ],
+    "items": [
+        {
+            "id": "quality.drc.clean",
+            "state": "pass",
+            "blocked": False,
+            "policy": "block",
+            "owner": "qor",
+            "title": "Final DRC clean",
+        },
+        {
+            "id": "report.sta.timing_reports",
+            "state": "failed",
+            "blocked": False,
+            "policy": "warn",
+            "owner": "checklist",
+            "title": "STA timing reports",
         },
     ],
 }
@@ -106,8 +125,11 @@ class TestSignoffInspect:
         summary = records[0]
         assert summary["signoff"] == "inspect"
         assert summary["status"] == "attention"
+        assert summary["readiness"] == "WARN"
         groups = [r for r in records if "group" in r]
         assert [g["group"] for g in groups] == ["harden", "sta"]
+        items = [r for r in records if "item" in r]
+        assert [i["item"] for i in items] == ["quality.drc.clean", "report.sta.timing_reports"]
         risks = [r for r in records if "risk" in r]
         assert risks[0]["title"] == "STA report missing"
 
@@ -116,12 +138,16 @@ class TestSignoffInspect:
     ):
         project_dir = create_cli_project()
         os.makedirs(os.path.join(project_dir, "default"))
-        _patch_inspect(monkeypatch, {"status": "blocked", "groups": [], "risks": []})
+        _patch_inspect(
+            monkeypatch, {"status": "blocked", "readiness": "ERROR", "groups": [], "risks": []}
+        )
 
         rc = cli_main.run(["signoff", "inspect", "--project", project_dir, "--plain"])
 
         assert rc == 0
-        assert plain_records(capsys.readouterr().out)[0]["status"] == "blocked"
+        record = plain_records(capsys.readouterr().out)[0]
+        assert record["status"] == "blocked"
+        assert record["readiness"] == "ERROR"
 
     def test_inspect_text_rendering(
         self, tmp_path, capsys, monkeypatch, create_cli_project, workspace_stub

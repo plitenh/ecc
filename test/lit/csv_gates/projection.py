@@ -16,18 +16,33 @@ def read_csv_rows(path: Path) -> list[dict]:
         return list(csv.DictReader(handle))
 
 
-def projection_lines(csv_dir: Path, design: str, *, spec: CsvExportSpec | None = None) -> list[str]:
-    csv_dir = Path(csv_dir)
-    if spec is None:
+def projection_lines(
+    csv_dir: Path | None,
+    design: str,
+    *,
+    spec: CsvExportSpec | None = None,
+    metrics_rows: dict[str, dict] | None = None,
+    checklist_rows: dict[str, dict] | None = None,
+) -> list[str]:
+    """Build FileCheck text from CSV files and/or in-memory rows."""
+    csv_dir = Path(csv_dir) if csv_dir is not None else None
+    if spec is None and csv_dir is not None:
         spec_path = csv_dir / "export_spec.yml"
         if spec_path.is_file():
             spec = load_csv_spec(str(spec_path))
+    if metrics_rows is None:
+        metrics_rows = {
+            (row.get("metric_name") or ""): row
+            for row in (read_csv_rows(csv_dir / "qor_metrics.csv") if csv_dir else [])
+            if row.get("metric_name")
+        }
+    if checklist_rows is None:
+        checklist_rows = {
+            (row.get("id") or ""): row
+            for row in (read_csv_rows(csv_dir / "checklist.csv") if csv_dir else [])
+            if row.get("id")
+        }
     lines = [f"design: {design}", "section: metrics"]
-    metrics_rows = {
-        (row.get("metric_name") or ""): row
-        for row in read_csv_rows(csv_dir / "qor_metrics.csv")
-        if row.get("metric_name")
-    }
     metric_order = (
         [item.id for item in spec.metrics] if spec and spec.metrics else list(metrics_rows)
     )
@@ -44,11 +59,6 @@ def projection_lines(csv_dir: Path, design: str, *, spec: CsvExportSpec | None =
     if not seen:
         lines.append("metrics: empty")
     lines.append("section: checklist")
-    checklist_rows = {
-        (row.get("id") or ""): row
-        for row in read_csv_rows(csv_dir / "checklist.csv")
-        if row.get("id")
-    }
     checklist_order = (
         [item.id for item in spec.checklist] if spec and spec.checklist else list(checklist_rows)
     )
@@ -64,6 +74,7 @@ def projection_lines(csv_dir: Path, design: str, *, spec: CsvExportSpec | None =
         )
     if not seen:
         lines.append("checklist: empty")
+    lines.append(f"readiness: {_readiness_from_checklist_rows(list(checklist_rows.values()))}")
     lines.append("section: gates")
     if spec and spec.metrics:
         for item in spec.metrics:
@@ -83,3 +94,36 @@ def projection_lines(csv_dir: Path, design: str, *, spec: CsvExportSpec | None =
                 f"state={row.get('state', '')} blocked={row.get('blocked', '')}"
             )
     return lines
+
+
+def _truthy(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes"}
+
+
+def _readiness_from_checklist_rows(rows: list[dict]) -> str:
+    """Map checklist CSV rows to milestone readiness (fixture-friendly, no PDK)."""
+    if not rows:
+        return "PASS"
+    saw_failed = False
+    saw_unavailable = False
+    saw_attention = False
+    for row in rows:
+        state = str(row.get("state") or "").strip().lower()
+        # CSV may use fail / failed
+        if state == "fail":
+            state = "failed"
+        present = str(row.get("present") or "true").strip().lower()
+        blocked = _truthy(row.get("blocked"))
+        if present == "false" or state in {"", "unavailable", "missing"}:
+            saw_unavailable = True
+        elif blocked and state == "failed":
+            saw_failed = True
+        elif state == "failed" or state not in {"pass", "passed"}:
+            saw_attention = True
+    if saw_failed:
+        return "ERROR"
+    if saw_unavailable:
+        return "MISS"
+    if saw_attention:
+        return "WARN"
+    return "PASS"
