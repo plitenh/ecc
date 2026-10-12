@@ -2,9 +2,17 @@ name: Signoff release kanban
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     paths:
-      - 'chipcompiler/engine/signoff/catalog.py'
+      - 'chipcompiler/engine/signoff/**'
+      - '.github/scripts/generate-signoff-kanban.py'
+      - '.github/signoff-board/**'
+      - '.github/workflows/signoff-kanban.yml'
+  push:
+    branches:
+      - feat/signoff-release-kanban
+    paths:
+      - 'chipcompiler/engine/signoff/**'
       - '.github/scripts/generate-signoff-kanban.py'
       - '.github/signoff-board/**'
       - '.github/workflows/signoff-kanban.yml'
@@ -25,14 +33,29 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Generate kanban markdown
+      - name: Install minimal import deps
+        run: pip install -q typing_extensions
+
+      - name: Generate + package board artifact
         run: |
+          set -euo pipefail
+          mkdir -p artifact
+          # Regenerate catalog topology board
           PYTHONPATH=. python .github/scripts/generate-signoff-kanban.py \
-            --out .github/signoff-board/signoff-kanban.md
+            --out artifact/signoff-kanban.md
+          # Ship checked-in live samples too (fixture PASS/WARN swimlanes)
+          for f in .github/signoff-board/signoff-kanban.live-*.md; do
+            if [[ -f "$f" ]]; then
+              cp "$f" artifact/
+            fi
+          done
+          # Also keep README for consumers
+          cp .github/signoff-board/README.md artifact/ 2>/dev/null || true
+          ls -la artifact
 
       - name: Upload board artifact
         uses: actions/upload-artifact@v4
         with:
           name: signoff-release-kanban
-          path: .github/signoff-board/signoff-kanban.md
+          path: artifact/
           if-no-files-found: error
