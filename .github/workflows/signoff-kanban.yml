@@ -1,0 +1,38 @@
+name: Signoff release kanban
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'chipcompiler/engine/signoff/catalog.py'
+      - '.github/scripts/generate-signoff-kanban.py'
+      - '.github/signoff-board/**'
+      - '.github/workflows/signoff-kanban.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  kanban:
+    name: Diagramize signoff metrics
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate kanban markdown
+        run: |
+          PYTHONPATH=. python .github/scripts/generate-signoff-kanban.py \
+            --out .github/signoff-board/signoff-kanban.md
+
+      - name: Upload board artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signoff-release-kanban
+          path: .github/signoff-board/signoff-kanban.md
+          if-no-files-found: error
