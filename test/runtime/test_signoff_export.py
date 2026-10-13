@@ -168,6 +168,7 @@ def test_inspect_signoff_package_reads_current_home_checklist(monkeypatch, tmp_p
     assert [group["id"] for group in review["groups"]] == [
         "initial",
         "config",
+        "cts",
         "harden",
         "final_design",
         "sta",
