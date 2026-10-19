@@ -40,3 +40,20 @@ Options:
 Recommendation: A until the `-j1` change is committed in the dreamplace repo.
 
 Decision:
+
+## Status (2026-10-19 11:42 UTC)
+
+Reported on this branch because later heartbeats were only written in chat.
+
+Verified again at 2026-10-19 11:42 UTC:
+
+- This branch tip was `b64f0d7`. Both Decision lines above were still empty.
+- `origin/main` was `26ba389`.
+- `uv sync` succeeded on 2026-10-16. `ecc-dreamplace` and `ecc-tools-bin` installed. Build stayed at `build.tool-args = ["-j1"]`.
+- `ruff check chipcompiler/ test/` passed.
+- `pytest test/`: 2134 passed, 1 failed, 6 errors. The failure is `test_help_keeps_styles_when_color_is_forced` under `NO_COLOR=1` and `TERM=dumb`. The same test passed after those variables were unset. The 6 errors are missing `/home/kernel_dev/works/pdk/icsprout55-pdk`.
+- `ty check` exits 1. Counts are in section 1. CI does not run `ty`.
+- Working tree still has many 644-to-755 mode changes. They are not part of this commit.
+- `gh` is not installed and `~/.config/gh` is absent, so no pull request was opened. The branch is on `git@github.com:plitenh/ecc.git`, branch `proposal/supervisor-open-questions`.
+
+No further code changes until a Decision commit lands. The three-day window ends 2026-10-19 12:37 UTC.
