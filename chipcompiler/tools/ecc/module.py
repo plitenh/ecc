@@ -78,15 +78,25 @@ class ECCToolsModule:
         include_m2_pg_rail_blockage: bool = False,  # noqa: FBT001, FBT002
         include_m2_pg_rail_density: bool = True,  # noqa: FBT001, FBT002
     ):
-        return self.ecc.pydb(
-            dm_inst_ptr,
-            route_num_bins_x,
-            route_num_bins_y,
-            routability_opt_flag,
-            with_sta,
-            include_m2_pg_rail_blockage,
-            include_m2_pg_rail_density,
-        )
+        try:
+            return self.ecc.pydb(
+                dm_inst_ptr,
+                route_num_bins_x,
+                route_num_bins_y,
+                routability_opt_flag,
+                with_sta,
+                include_m2_pg_rail_blockage,
+                include_m2_pg_rail_density,
+            )
+        except TypeError:
+            # Older ecc_tools_bin builds only expose the 5-argument PyPlaceDB bridge.
+            return self.ecc.pydb(
+                dm_inst_ptr,
+                route_num_bins_x,
+                route_num_bins_y,
+                routability_opt_flag,
+                with_sta,
+            )
 
     def build_macro_connection_map(self, max_hop: int):
         return self.ecc.build_macro_connection_map(max_hop)
