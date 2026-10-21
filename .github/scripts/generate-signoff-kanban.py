@@ -25,6 +25,11 @@ _CATEGORY_GUIDE: tuple[tuple[str, str, str], ...] = (
         "Machine predicates (DRC/LVS/STA/RCX/area). Failures → ERROR readiness.",
     ),
     (
+        "performance",
+        "Performance / iSTA",
+        "Numeric timing (WNS/TNS/freq) and power slots for multi-version compare.",
+    ),
+    (
         "artifact",
         "Evidence artifacts",
         "Required files from Harden / LVS / RCX / STA / synthesis (and optional LEC).",
@@ -190,7 +195,7 @@ def _category_diagram(category: str, items: list) -> str:
     for it in items:
         by_step[str(it.step)].append(it)
     step_ids = list(by_step)
-    for a, b in zip(step_ids, step_ids[1:]):
+    for a, b in zip(step_ids, step_ids[1:], strict=False):
         left = _mermaid_id(by_step[a][0].id)
         right = _mermaid_id(by_step[b][0].id)
         lines.append(f"  {left} -.-> {right}")
@@ -326,7 +331,9 @@ def render_markdown(catalog: list, assessment: dict | None) -> str:
             "Re-run with `--assessment` to split swimlanes."
         )
     out.append("")
-    out.append(_swimlane_board(items_by_state, compact=True))
+    # Keep every card visible when the catalog is small enough to read.
+    card_total = sum(len(v) for v in items_by_state.values())
+    out.append(_swimlane_board(items_by_state, compact=card_total > 40))
     out.append("")
 
     out.append("## Categories")
@@ -352,7 +359,10 @@ def render_markdown(catalog: list, assessment: dict | None) -> str:
         out.append("")
         out.append(_category_diagram(cat, by_cat[cat]))
         out.append("")
-        out.append("[↑ Contents](#contents) · [↑ Map](#catalog-map) · [↑ Readiness](#readiness-board)")
+        out.append(
+            "[↑ Contents](#contents) · [↑ Map](#catalog-map) · "
+            "[↑ Readiness](#readiness-board)"
+        )
         out.append("")
 
     out.append("## Per-metric index")
@@ -386,10 +396,45 @@ def render_markdown(catalog: list, assessment: dict | None) -> str:
     return "\n".join(out)
 
 
+def _append_version_footer(
+    text: str,
+    *,
+    commit: str,
+    commit_url: str,
+    snapshot_sha256: str,
+) -> str:
+    lines = [
+        text.rstrip(),
+        "",
+        "## Version",
+        "",
+        f"| Field | Value |",
+        f"| --- | --- |",
+        f"| Git commit | [`{commit[:12]}`]({commit_url}) |",
+        f"| Git commit (full) | `{commit}` |",
+        f"| Snapshot SHA-256 | `{snapshot_sha256}` |",
+        "",
+        "Compare snapshots with `plitenh/ecc-ci`:",
+        "",
+        "- pairwise: `scripts/diff_signoff_snapshots.py` (versions · item delta · state delta)",
+        "- multi-point batch diagram: `scripts/diagram_signoff_compare.py` "
+        "(mermaid + ASCII matrix across N versions)",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--assessment", default="", help="optional assessment JSON")
     parser.add_argument("--out", default="signoff-kanban.md", help="output markdown")
+    parser.add_argument("--commit", default="", help="git commit id to stamp")
+    parser.add_argument("--commit-url", default="", help="browse URL for --commit")
+    parser.add_argument(
+        "--snapshot-sha256",
+        default="",
+        help="content fingerprint (SHA-256) for version compare hooks",
+    )
     args = parser.parse_args()
 
     assessment = None
@@ -397,6 +442,13 @@ def main() -> int:
         assessment = json.loads(Path(args.assessment).read_text(encoding="utf-8"))
 
     text = render_markdown(_load_catalog(), assessment)
+    if args.commit and args.commit_url and args.snapshot_sha256:
+        text = _append_version_footer(
+            text,
+            commit=args.commit,
+            commit_url=args.commit_url,
+            snapshot_sha256=args.snapshot_sha256,
+        )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")

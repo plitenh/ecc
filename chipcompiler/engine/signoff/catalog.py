@@ -105,6 +105,20 @@ def _flow(step: str) -> SignoffItemSpec:
     )
 
 
+def _performance(item_id: str, step: str, title: str) -> SignoffItemSpec:
+    """Numeric PPA / iSTA slots. Optional until QoR gates bind predicates."""
+    return SignoffItemSpec(
+        id=item_id,
+        step=step,
+        category="performance",
+        owner="qor",
+        policy="warn",
+        title=title,
+        optional=True,
+        fail_readiness="WARN",
+    )
+
+
 SIGNOFF_ITEM_CATALOG: tuple[SignoffItemSpec, ...] = (
     # Quality gates (QoR owns the predicate).
     _quality("qor.drc.clean", StepEnum.DRC.value, "Final DRC clean"),
@@ -197,6 +211,22 @@ SIGNOFF_ITEM_CATALOG: tuple[SignoffItemSpec, ...] = (
         policy="block",
         title="Configuration sta",
         fail_readiness="MISS",
+    ),
+    # Performance — chip timing/power + host four for now:
+    # 组件耗时 / 速度 / 内存峰值 / 内存平均 (Reading = "value unit").
+    _performance("performance.sta.setup_wns", StepEnum.STA.value, "STA setup WNS"),
+    _performance("performance.sta.setup_tns", StepEnum.STA.value, "STA setup TNS"),
+    _performance("performance.sta.hold_wns", StepEnum.STA.value, "STA hold WNS"),
+    _performance("performance.sta.hold_tns", StepEnum.STA.value, "STA hold TNS"),
+    _performance("performance.sta.frequency", StepEnum.STA.value, "STA frequency"),
+    _performance("performance.power.dynamic", StepEnum.STA.value, "Dynamic power"),
+    _performance("performance.power.leakage", StepEnum.STA.value, "Leakage power"),
+    _performance("performance.host.latency", "host", "组件耗时"),
+    _performance("performance.host.throughput", "host", "速度"),
+    _performance("performance.host.peak_memory", "host", "内存峰值"),
+    _performance("performance.host.avg_memory", "host", "内存平均"),
+    _performance(
+        "performance.host.compile_peak_memory", "host", "编译内存峰值"
     ),
 )
 
