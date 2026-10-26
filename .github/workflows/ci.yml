@@ -587,6 +587,76 @@ jobs:
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
+  # Project CLI/RPC lit on bare ubuntu (not manylinux Test): same Nix install
+  # path as e2e / nix-build — no curl|sh bootstrap.
+  project-lit:
+    name: Project scenario lit
+    needs: [check-version, pdk, sizer]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python dependencies
+        uses: ./.github/actions/setup-python-deps
+        with:
+          build-all: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs['build-all'] == 'true' && 'true' || 'false' }}
+
+      - name: Setup PDK
+        uses: actions/download-artifact@v4
+        with:
+          name: icsprout55-pdk
+          path: ../pdk
+
+      - name: Extract PDK
+        run: |
+          mkdir -p ../pdk/icsprout55-pdk
+          tar -xzf ../pdk/icsprout55-pdk.tar.gz -C ../pdk/icsprout55-pdk
+          test -s ../pdk/icsprout55-pdk/techfile/icsprout55.layermap
+
+      - name: Setup OSS CAD Suite
+        uses: YosysHQ/setup-oss-cad-suite@v4
+        with:
+          version: ${{ env.OSS_CAD_SUITE_VERSION }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Yosys
+        run: |
+          yosys -V
+          yosys -p "plugin -i slang"
+
+      - name: Setup Sizer
+        uses: actions/download-artifact@v4
+        with:
+          name: ecc-sizer
+
+      - name: Extract Sizer
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/ecc-sizer"
+          tar -xzf ecc-sizer.tar.gz -C "$RUNNER_TEMP/ecc-sizer"
+          echo "$RUNNER_TEMP/ecc-sizer/bin" >> "$GITHUB_PATH"
+          echo "CHIPCOMPILER_ECC_SIZER_ROOT=$RUNNER_TEMP/ecc-sizer" >> "$GITHUB_ENV"
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v19
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          extra-conf: |
+            extra-substituters = https://cache.ani.llc
+            extra-trusted-public-keys = cache.ani.llc:8nINs8lCCU0Yoed1KMjLj6fCHpMmrY+sFuhGTdxLB88=
+
+      - name: Cache Nix store
+        uses: DeterminateSystems/magic-nix-cache-action@v15
+
+      - name: Project scenario lit
+        env:
+          CHIPCOMPILER_ICS55_PDK_ROOT: ${{ github.workspace }}/../pdk/icsprout55-pdk
+        run: bash nix/scripts/ci_project_lit.sh
+
   nix-build:
     name: Nix Build (flake checks)
     runs-on: ubuntu-latest
