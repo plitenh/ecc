@@ -587,7 +587,7 @@ jobs:
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
-  # Project CLI/RPC lit on bare ubuntu (not manylinux Test): same Nix install
+  # Project CLI lit on bare ubuntu (not manylinux Test): same Nix install
   # path as e2e / nix-build — no curl|sh bootstrap.
   project-lit:
     name: Project scenario lit
