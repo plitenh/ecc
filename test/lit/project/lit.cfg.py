@@ -1,8 +1,10 @@
-# Lit suite: project scenarios (CLI --project and RPC stdio).
+# Lit suite: project CLI --project scenario.
 #
 # Run:
 #   CHIPCOMPILER_ICS55_PDK_ROOT=... nix run .#signoff-lit -- test/lit/project
 #   bash nix/scripts/ci_project_lit.sh
+#
+# RPC stdio coverage lives in pytest (test/runtime/test_stdio_server.py), not here.
 
 import os
 from pathlib import Path
@@ -57,7 +59,6 @@ config.substitutions.extend(
         ("%python", python),
         ("%filecheck", filecheck),
         ("%cli_scenario", str(scripts / "run_cli_project_scenario.sh")),
-        ("%rpc_scenario", str(scripts / "run_rpc_project_scenario.sh")),
         ("%check_status_success", str(checks / "status_success.check")),
     ]
 )
