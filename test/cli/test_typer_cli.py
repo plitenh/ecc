@@ -119,8 +119,10 @@ def test_version_payload_reports_stamped_build_identity(monkeypatch, capsys):
     import types
 
     stamp = types.ModuleType("chipcompiler._build_info")
-    stamp.BUILD_COMMIT = "27084f4779d7e8ddb69ea9c25f9c116aaaab29c7"
-    stamp.BUILD_DATE = "20261012"
+    stamp.__dict__.update(
+        BUILD_COMMIT="27084f4779d7e8ddb69ea9c25f9c116aaaab29c7",
+        BUILD_DATE="20261012",
+    )
     monkeypatch.setitem(sys.modules, "chipcompiler._build_info", stamp)
 
     rc = cli_main.run(["version", "--json"])
@@ -136,6 +138,10 @@ def test_version_metadata_missing_uses_unknown(monkeypatch, capsys):
         raise metadata.PackageNotFoundError(distribution)
 
     monkeypatch.setattr("chipcompiler.cli.core.version_info.metadata.version", missing_version)
+    monkeypatch.setattr(
+        "chipcompiler.cli.core.version_info.build_identity",
+        lambda: (None, None),
+    )
     monkeypatch.setattr("chipcompiler.__version__", "source-fallback")
     monkeypatch.setattr(
         "chipcompiler.cli.app.tool_versions",
