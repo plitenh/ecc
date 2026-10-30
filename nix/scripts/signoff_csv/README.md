@@ -21,6 +21,18 @@ workspace already produces:
 | `harden` | `harden.csv` | mandatory |
 | `area` | `area.csv` | report |
 
+## Scope and limitations
+
+This is a collector skeleton, not a signoff gate:
+
+- CI runs `nix/scripts/signoff_csv/fixture.py` only; it does not run real EDA tools or real DRC/LVS/STA/LEC/Harden jobs.
+- The STA check currently verifies row presence only; it does not enforce `WNS >= 0` or `TNS == 0`.
+- The Harden check currently verifies presence only; it does not enforce `harden_artifact_missing_count == 0`.
+- Failure paths (`present=false`, DRC gate fail, LEC not `proven`, negative WNS, Harden missing artifacts) are not covered by fixture tests.
+- On fork PRs, the `pull_request` token is read-only, so the notification step cannot reliably post/update the PR comment.
+
+The `Signoff CSV collector` check is therefore not a substitute for reviewing the active PDK, rule deck, STA signoff criteria, or repository branch-protection required checks.
+
 ## Schema
 
 ### `sta.csv`
