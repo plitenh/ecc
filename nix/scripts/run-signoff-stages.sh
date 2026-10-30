@@ -4,13 +4,17 @@
 # Sequence:
 #   prepare -> impl -> harden -> lec -> physical -> sta -> ir_em
 #
-# prepare copies the design only; the first `ecc run --from` creates and
-# seeds the workspace from ecc.toml, avoiding a pre-created workspace with
-# unresolved RTL/filelist inputs. Each later stage runs a bounded range on the
-# same workspace so a failure stops the job before the next stage.
+# For rtl2gds designs, prepare copies the project and the first implementation
+# stage creates a full synthesis..Harden flow target, rehydrates the Yosys RTL
+# filelist, then executes only synthesis..filler. Later stages run bounded
+# ranges on the same full target, so a failure stops the job before the next
+# stage.
+#
+# Non-rtl2gds presets (for example syn_sta) keep their configured preset and
+# skip signoff stages that are not present in their persisted flow.
 set -euo pipefail
 
-usage() { sed -n '2,20p' "$0"; exit 2; }
+usage() { sed -n '2,24p' "$0"; exit 2; }
 
 ecc=""
 designs_dir=""
@@ -73,6 +77,97 @@ run_ecc() {
   return 1
 }
 
+project_preset() {
+  python3 - "$1/ecc.toml" <<'PY'
+import sys
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
+
+with open(sys.argv[1], "rb") as stream:
+    data = tomllib.load(stream)
+flow = data.get("flow", {})
+print(flow.get("preset", "rtl2gds"))
+PY
+}
+
+flow_has_step() {
+  local workspace="$1"
+  local wanted="$2"
+  local flow_json="$workspace/home/flow.json"
+  [[ -f "$flow_json" ]] || return 1
+  python3 - "$flow_json" "$wanted" <<'PY'
+import json
+import sys
+
+flow = json.load(open(sys.argv[1], encoding="utf-8"))
+wanted = sys.argv[2].lower()
+for step in flow.get("steps", []):
+    if str(step.get("name", "")).lower() == wanted:
+        sys.exit(0)
+sys.exit(1)
+PY
+}
+
+ensure_rtl_filelist() {
+  local project="$1"
+  local workspace="$2"
+  local origin="$workspace/origin"
+  local filelist="$origin/filelist"
+  mkdir -p "$origin"
+  if [[ -s "$filelist" ]]; then
+    echo "using existing RTL filelist $filelist"
+    return 0
+  fi
+  python3 - "$project" "$filelist" <<'PY'
+from pathlib import Path
+import sys
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
+
+project = Path(sys.argv[1])
+filelist = Path(sys.argv[2])
+with (project / "ecc.toml").open("rb") as stream:
+    data = tomllib.load(stream)
+rtl = data.get("design", {}).get("rtl", [])
+paths = []
+for entry in rtl:
+    candidate = (project / entry).resolve()
+    if not candidate.is_file():
+        raise SystemExit(f"RTL source not found: {candidate}")
+    paths.append(str(candidate))
+filelist.write_text("\n".join(paths) + "\n", encoding="utf-8")
+print(f"wrote RTL filelist {filelist}")
+PY
+}
+
+create_full_rtl2gds_target() {
+  run_ecc prepare-full workspace create default \
+    --project "$dst" \
+    --from synthesis \
+    --to Harden \
+    --plain
+  ensure_rtl_filelist "$dst" "$dst/default"
+  run_ecc hydrate-filelist param set file_list "$dst/default/origin/filelist" \
+    --project "$dst" \
+    --workspace default
+}
+
+run_if_present() {
+  local label="$1"
+  local step="$2"
+  shift 2
+  if ! flow_has_step "$dst/default" "$step"; then
+    echo "SKIP $design $label (step $step not in persisted flow)"
+    return 0
+  fi
+  run_ecc "$label" "$@"
+}
+
 case "$stage" in
   prepare)
     if [[ ! -f "$src/ecc.toml" ]]; then
@@ -85,22 +180,29 @@ case "$stage" in
     echo "prepared $design in $dst"
     ;;
   impl)
-    run_ecc impl run --project "$dst" --workspace default --from synthesis --to filler --plain
+    if [[ "$(project_preset "$dst")" != "rtl2gds" ]]; then
+      run_ecc impl run --project "$dst" --workspace default --plain
+    else
+      if [[ ! -f "$dst/default/home/flow.json" ]]; then
+        create_full_rtl2gds_target
+      fi
+      run_ecc impl run --project "$dst" --workspace default --from synthesis --to filler --plain
+    fi
     ;;
   harden)
-    run_ecc harden run --project "$dst" --workspace default --from Harden --to Harden --plain
+    run_if_present harden Harden run --project "$dst" --workspace default --from Harden --to Harden --plain
     ;;
   lec)
-    run_ecc lec run --project "$dst" --workspace default --from postRouteLec --to postRouteLec --plain
+    run_if_present lec postRouteLec run --project "$dst" --workspace default --from postRouteLec --to postRouteLec --plain
     ;;
   physical)
-    run_ecc physical run --project "$dst" --workspace default --from lvs --to antennaCheck --plain
+    run_if_present physical lvs run --project "$dst" --workspace default --from lvs --to antennaCheck --plain
     ;;
   sta)
-    run_ecc sta run --project "$dst" --workspace default --from rcx --to sta --plain
+    run_if_present sta sta run --project "$dst" --workspace default --from rcx --to sta --plain
     ;;
   ir_em)
-    run_ecc ir_em run --project "$dst" --workspace default --from powerAnalysis --to emir --plain
+    run_if_present ir_em emir run --project "$dst" --workspace default --from powerAnalysis --to emir --plain
     ;;
   *)
     echo "unknown stage: $stage" >&2
