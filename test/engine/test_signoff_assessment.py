@@ -28,7 +28,6 @@ def test_stale_checklist_cannot_make_incomplete_flow_ready(tmp_path):
     result = build_signoff_assessment(workspace)
 
     assert result["status"] == "blocked"
-    assert result["readiness"] == "MISS"
 
 
 def test_advisory_failures_leave_signoff_available_for_attention_review(tmp_path):
@@ -55,7 +54,6 @@ def test_advisory_failures_leave_signoff_available_for_attention_review(tmp_path
         },
     )
     assert result["status"] == "attention"
-    assert result["readiness"] == "WARN"
     assert all(risk["severity"] == "warning" for risk in result["risks"])
 
 
@@ -68,7 +66,6 @@ def test_malformed_checklist_is_reported_as_unavailable(tmp_path):
     result = build_signoff_assessment(workspace)
 
     assert result["status"] == "blocked"
-    assert result["readiness"] == "MISS"
 
 
 def test_oversized_checklist_is_reported_as_unavailable(tmp_path):
@@ -83,7 +80,6 @@ def test_oversized_checklist_is_reported_as_unavailable(tmp_path):
     result = build_signoff_assessment(workspace)
 
     assert result["status"] == "blocked"
-    assert result["readiness"] == "MISS"
     assert result["risks"][0]["title"] == "Signoff checklist unavailable"
 
 

@@ -3,7 +3,6 @@ from typing import Any, TypedDict
 from chipcompiler.data import ADVISORY_FLOW_STEPS, StepEnum
 from chipcompiler.data.checklist import workspace_checklist_path
 from chipcompiler.data.step import STEP_DIRECTORIES
-from chipcompiler.engine.signoff_readiness import attach_readiness
 from chipcompiler.engine.snapshot_limits import (
     CHECKLIST_READ_MAX_BYTES,
     read_bounded_json_object,
@@ -51,7 +50,7 @@ def build_signoff_assessment(
         and str(step.get("state", "")) not in {"Success", "Skipped"}
         for step in steps
     ):
-        return attach_readiness(_unavailable_assessment(), checklist=None)
+        return _unavailable_assessment()
     if checklist is None:
         checklist_result = read_bounded_json_object(
             workspace_checklist_path(workspace.directory),
@@ -64,7 +63,7 @@ def build_signoff_assessment(
         or checklist.get("kind") != "signoff_checklist"
         or not isinstance(checklist.get("checklist"), list)
     ):
-        return attach_readiness(_unavailable_assessment(), checklist=None)
+        return _unavailable_assessment()
 
     groups: dict[str, _ReviewGroup] = {}
     for group_id, label in _REVIEW_GROUPS:
@@ -130,14 +129,11 @@ def build_signoff_assessment(
         )
 
     status = checklist.get("status")
-    return attach_readiness(
-        {
-            "status": status if status in {"ready", "attention", "blocked"} else "blocked",
-            "groups": review_groups,
-            "risks": sorted(risks, key=lambda risk: risk["severity"] != "blocked"),
-        },
-        checklist=checklist,
-    )
+    return {
+        "status": status if status in {"ready", "attention", "blocked"} else "blocked",
+        "groups": review_groups,
+        "risks": sorted(risks, key=lambda risk: risk["severity"] != "blocked"),
+    }
 
 
 def _risk(group: _ReviewGroup, severity: str, details: list[dict], summary: str) -> dict:
