@@ -152,9 +152,44 @@ create_full_rtl2gds_target() {
     --to Harden \
     --plain
   ensure_rtl_filelist "$dst" "$dst/default"
-  run_ecc hydrate-filelist param set file_list "$dst/default/origin/filelist" \
-    --project "$dst" \
-    --workspace default
+  hydrate_file_list_param "$dst/default" "$dst/default/origin/filelist"
+}
+
+hydrate_file_list_param() {
+  local workspace="$1"
+  local value="$2"
+  local params="$workspace/home/params.toml"
+  [[ -f "$params" ]] || { echo "missing $params" >&2; return 1; }
+  python3 - "$params" "$value" <<'PY'
+from pathlib import Path
+import sys
+
+params = Path(sys.argv[1])
+value = sys.argv[2]
+lines = params.read_text(encoding="utf-8").splitlines()
+try:
+    params_idx = lines.index("[params]")
+except ValueError:
+    raise SystemExit(f"[params] section not found in {params}")
+
+section_end = len(lines)
+for idx in range(params_idx + 1, len(lines)):
+    if lines[idx].startswith("["):
+        section_end = idx
+        break
+
+insert_at = params_idx + 1
+for idx in range(params_idx + 1, section_end):
+    if lines[idx].startswith("file_list ="):
+        lines[idx] = f'file_list = "{value}"'
+        insert_at = None
+        break
+if insert_at is not None:
+    lines.insert(insert_at, f'file_list = "{value}"')
+
+params.write_text("\n".join(lines) + "\n", encoding="utf-8")
+print(f"hydrated file_list in {params}")
+PY
 }
 
 run_if_present() {
