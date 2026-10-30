@@ -51,13 +51,13 @@ inputs:
 outputs:
   run-id:
     description: Source workflow run used for the downloaded artifact.
-    value: ${{ steps.install.outputs.run-id }}
+    value: ${{ steps.export.outputs.run-id }}
   head-sha:
     description: Source Git commit associated with the selected workflow run.
-    value: ${{ steps.install.outputs.head-sha }}
+    value: ${{ steps.export.outputs.head-sha }}
   archive-path:
     description: Local path to the downloaded tool archive.
-    value: ${{ steps.install.outputs.archive-path }}
+    value: ${{ steps.export.outputs.archive-path }}
 
 runs:
   using: composite
@@ -101,8 +101,8 @@ runs:
           echo "::error::Could not resolve the source commit for run ${run_id}"
           exit 1
         fi
-        echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
-        echo "head-sha=$head_sha" >> "$GITHUB_OUTPUT"
+        echo "TOOL_RUN_ID=$run_id" >> "$GITHUB_ENV"
+        echo "TOOL_HEAD_SHA=$head_sha" >> "$GITHUB_ENV"
 
         install_root="${RUNNER_TEMP}/${{ inputs.artifact }}"
         mkdir -p "$install_root"
@@ -117,7 +117,7 @@ runs:
           echo "::error::${{ inputs.archive }} was not in the downloaded artifact"
           exit 1
         fi
-        echo "archive-path=$archive" >> "$GITHUB_OUTPUT"
+        echo "TOOL_ARCHIVE_PATH=$archive" >> "$GITHUB_ENV"
         if [ -n '${{ inputs.sha256 }}' ]; then
           printf '%s  %s\n' '${{ inputs.sha256 }}' "$archive" | sha256sum -c -
         fi
@@ -144,6 +144,7 @@ runs:
       env:
         ROOT_MARKER: ${{ inputs.root-marker }}
         ROOT_ENV: ${{ inputs.root-env }}
+        ARCHIVE: ${{ inputs.archive }}
         RUN_ID: ${{ inputs.run-id }}
         HEAD_SHA: ${{ inputs.head-sha }}
       run: |
@@ -157,5 +158,16 @@ runs:
         tool_root="${marker%/"$ROOT_MARKER"}"
         echo "$tool_root/bin" >> "$GITHUB_PATH"
         echo "$ROOT_ENV=$tool_root" >> "$GITHUB_ENV"
-        echo "run-id=$RUN_ID" >> "$GITHUB_OUTPUT"
-        echo "head-sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+        archive="$(find "$install_root" -name "$ARCHIVE" -print -quit)"
+        echo "TOOL_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+        echo "TOOL_HEAD_SHA=$HEAD_SHA" >> "$GITHUB_ENV"
+        echo "TOOL_ARCHIVE_PATH=$archive" >> "$GITHUB_ENV"
+
+    - name: Export tool outputs
+      id: export
+      if: ${{ !cancelled() }}
+      shell: bash
+      run: |
+        echo "run-id=${TOOL_RUN_ID:-}" >> "$GITHUB_OUTPUT"
+        echo "head-sha=${TOOL_HEAD_SHA:-}" >> "$GITHUB_OUTPUT"
+        echo "archive-path=${TOOL_ARCHIVE_PATH:-}" >> "$GITHUB_OUTPUT"

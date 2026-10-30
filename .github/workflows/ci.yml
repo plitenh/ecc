@@ -142,6 +142,17 @@ jobs:
         run: |
           "${CHIPCOMPILER_KEPLER_FORMAL_ROOT}/bin/kepler-formal" --version
 
+      - name: Package kepler-formal for test job
+        run: |
+          tar -czf kepler-formal-ecc-ci.tar.gz -C "$CHIPCOMPILER_KEPLER_FORMAL_ROOT" .
+
+      - name: Upload kepler-formal
+        uses: actions/upload-artifact@v4
+        with:
+          name: kepler-formal-ecc-ci
+          path: kepler-formal-ecc-ci.tar.gz
+          retention-days: 1
+
   test:
     name: Test
     needs: [check-version, list-versions, prepare-test-tools, pdk, sizer]
@@ -198,25 +209,21 @@ jobs:
           test -f "${CHIPCOMPILER_ECC_SIZER_ROOT}/src/sizer_os.tcl"
           test -x "${CHIPCOMPILER_ECC_SIZER_ROOT}/libexec/Sizer"
 
-      - name: Setup kepler-formal
-        id: install
-        uses: ./.github/actions/install-ci-tool
+      - name: Download kepler-formal
+        uses: actions/download-artifact@v4
         with:
-          repo: ${{ needs.list-versions.outputs.kepler_formal_repo }}
-          workflow: ${{ needs.list-versions.outputs.kepler_formal_workflow }}
-          run-id: ${{ needs.list-versions.outputs.kepler_formal_run_id }}
-          head-sha: ${{ needs.list-versions.outputs.kepler_formal_git_commit }}
-          cache-key: kepler-formal-${{ needs.list-versions.outputs.kepler_formal_run_id }}-${{ needs.list-versions.outputs.kepler_formal_sha256 }}
-          sha256: ${{ needs.list-versions.outputs.kepler_formal_sha256 }}
-          artifact: ${{ needs.list-versions.outputs.kepler_formal_artifact }}
-          archive: ${{ needs.list-versions.outputs.kepler_formal_archive }}
-          root-marker: ${{ needs.list-versions.outputs.kepler_formal_root_marker }}
-          root-env: CHIPCOMPILER_KEPLER_FORMAL_ROOT
-          github-token: ${{ github.token }}
+          name: kepler-formal-ecc-ci
+
+      - name: Extract kepler-formal
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/kepler-formal"
+          tar -xzf kepler-formal-ecc-ci.tar.gz -C "$RUNNER_TEMP/kepler-formal"
+          echo "$RUNNER_TEMP/kepler-formal/bin" >> "$GITHUB_PATH"
+          echo "CHIPCOMPILER_KEPLER_FORMAL_ROOT=$RUNNER_TEMP/kepler-formal" >> "$GITHUB_ENV"
 
       - name: Verify kepler-formal
         run: |
-          test '${{ steps.install.outputs.head-sha }}' = '${{ needs.list-versions.outputs.kepler_formal_git_commit }}'
           command -v kepler-formal
           "${CHIPCOMPILER_KEPLER_FORMAL_ROOT}/bin/kepler-formal" --version
 
