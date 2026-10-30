@@ -182,3 +182,20 @@ class TestManifest:
         assert manifest.gates_failed == 1
         assert manifest.tools["ecc"]
         assert manifest.spec_sha256
+
+
+class TestSignoffThresholdGates:
+    def test_sta_setup_wns_must_be_nonnegative(self):
+        spec = MetricSpec(id="sta_setup_wns", reference=0, op=">=")
+        assert evaluate_metric_gate({"present": "true", "value": "-0.01"}, spec) == "fail"
+        assert evaluate_metric_gate({"present": "true", "value": "0.0"}, spec) == "pass"
+
+    def test_sta_setup_tns_must_be_zero(self):
+        spec = MetricSpec(id="sta_setup_tns", reference=0, op="==")
+        assert evaluate_metric_gate({"present": "true", "value": "1.0"}, spec) == "fail"
+        assert evaluate_metric_gate({"present": "true", "value": "0.0"}, spec) == "pass"
+
+    def test_harden_artifact_missing_count_must_be_zero(self):
+        spec = MetricSpec(id="harden_artifact_missing_count", reference=0, op="==")
+        assert evaluate_metric_gate({"present": "true", "value": "2"}, spec) == "fail"
+        assert evaluate_metric_gate({"present": "true", "value": "0"}, spec) == "pass"
