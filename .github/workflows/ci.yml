@@ -423,10 +423,9 @@ jobs:
         run: |
           # xtea disabled everywhere for now: real run shows hold WNS < 0,
           # which would keep its strict signoff gates red until tuned.
-          excludes=(xtea)
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            excludes+=(aes BM64)
-          fi
+          # GitHub-hosted fork runners also skip the two longest flows;
+          # they remain covered on the upstream self-hosted runner.
+          excludes=(xtea Cstage-rv32e-axi aes)
           designs="$(find designs -mindepth 2 -maxdepth 2 -name ecc.toml -printf '%h\n' \
             | xargs -n1 basename | grep -vxFf <(printf '%s\n' "${excludes[@]}") \
             | jq -R . | jq -cs .)"
