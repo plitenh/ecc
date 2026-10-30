@@ -129,6 +129,40 @@ try:
 except ModuleNotFoundError:
     import tomli as tomllib
 
+FILELIST_SUFFIXES = {".f", ".fl", ".filelist"}
+
+
+def quote_path(path):
+    text = str(path)
+    return f'"{text}"' if any(ch.isspace() for ch in text) else text
+
+
+def parse_filelist(path):
+    entries = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith(("#", "//", "`")):
+            continue
+        if line.startswith("+"):
+            continue
+        if line.startswith("-"):
+            continue
+        for marker in ("#", "//"):
+            if marker in line:
+                line = line[: line.index(marker)].strip()
+        line = line.strip().strip("\"'")
+        if line:
+            entries.append(Path(line))
+    return entries
+
+
+def resolve_entry(project, entry):
+    candidate = (project / entry).resolve()
+    if not candidate.is_file():
+        raise SystemExit(f"RTL source not found: {candidate}")
+    return candidate
+
+
 project = Path(sys.argv[1])
 filelist = Path(sys.argv[2])
 with (project / "ecc.toml").open("rb") as stream:
@@ -136,10 +170,16 @@ with (project / "ecc.toml").open("rb") as stream:
 rtl = data.get("design", {}).get("rtl", [])
 paths = []
 for entry in rtl:
-    candidate = (project / entry).resolve()
-    if not candidate.is_file():
-        raise SystemExit(f"RTL source not found: {candidate}")
-    paths.append(str(candidate))
+    candidate = resolve_entry(project, entry)
+    if candidate.suffix.lower() in FILELIST_SUFFIXES:
+        base = candidate.parent
+        for nested in parse_filelist(candidate):
+            nested_path = nested if nested.is_absolute() else base / nested
+            if not nested_path.is_file():
+                raise SystemExit(f"RTL source not found: {nested_path}")
+            paths.append(quote_path(nested_path.resolve()))
+    else:
+        paths.append(quote_path(candidate))
 filelist.write_text("\n".join(paths) + "\n", encoding="utf-8")
 print(f"wrote RTL filelist {filelist}")
 PY
