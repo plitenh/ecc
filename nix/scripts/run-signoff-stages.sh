@@ -4,8 +4,9 @@
 # Sequence:
 #   prepare -> impl -> harden -> lec -> physical -> sta -> ir_em
 #
-# prepare copies the design and creates a full synthesis..Harden flow
-# workspace without running it. Each later stage runs a bounded range on the
+# prepare copies the design only; the first `ecc run --from` creates and
+# seeds the workspace from ecc.toml, avoiding a pre-created workspace with
+# unresolved RTL/filelist inputs. Each later stage runs a bounded range on the
 # same workspace so a failure stops the job before the next stage.
 set -euo pipefail
 
@@ -74,14 +75,14 @@ run_ecc() {
 
 case "$stage" in
   prepare)
+    if [[ ! -f "$src/ecc.toml" ]]; then
+      echo "FAIL $design prepare (missing $src/ecc.toml)" >&2
+      exit 1
+    fi
     rm -rf "$dst"
     mkdir -p "$out_root"
     cp -a "$src" "$dst"
-    run_ecc prepare workspace create default \
-      --project "$dst" \
-      --from synthesis \
-      --to Harden \
-      --plain
+    echo "prepared $design in $dst"
     ;;
   impl)
     run_ecc impl run --project "$dst" --workspace default --from synthesis --to filler --plain
