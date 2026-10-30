@@ -450,8 +450,8 @@ jobs:
           swapon --show
           free -h
 
-      - name: Run design flows
-        id: design-flow
+      - name: Prepare signoff workspace
+        id: prepare-signoff
         run: |
           emir_params="$(dist/ecc-bundle/ecc param list --step emir --plain \
             --project "designs/${{ matrix.design }}")"
@@ -461,11 +461,66 @@ jobs:
               "$PWD/test/fixtures/emir/ics55_synthetic.tech" \
               --project "designs/${{ matrix.design }}"
           fi
-          bash nix/scripts/run-designs.sh \
+          bash nix/scripts/run-signoff-stages.sh \
             --ecc "$PWD/dist/ecc-bundle/ecc" \
             --designs-dir designs \
             --design "${{ matrix.design }}" \
-            --out-root "$RUNNER_TEMP/e2e"
+            --out-root "$RUNNER_TEMP/e2e" \
+            --stage prepare
+
+      - name: Run implementation through filler
+        run: |
+          bash nix/scripts/run-signoff-stages.sh \
+            --ecc "$PWD/dist/ecc-bundle/ecc" \
+            --designs-dir designs \
+            --design "${{ matrix.design }}" \
+            --out-root "$RUNNER_TEMP/e2e" \
+            --stage impl
+
+      - name: Run Harden
+        run: |
+          bash nix/scripts/run-signoff-stages.sh \
+            --ecc "$PWD/dist/ecc-bundle/ecc" \
+            --designs-dir designs \
+            --design "${{ matrix.design }}" \
+            --out-root "$RUNNER_TEMP/e2e" \
+            --stage harden
+
+      - name: Run postRouteLec
+        run: |
+          bash nix/scripts/run-signoff-stages.sh \
+            --ecc "$PWD/dist/ecc-bundle/ecc" \
+            --designs-dir designs \
+            --design "${{ matrix.design }}" \
+            --out-root "$RUNNER_TEMP/e2e" \
+            --stage lec
+
+      - name: Run LVS/DRC/Antenna (ERC not a flow step)
+        run: |
+          bash nix/scripts/run-signoff-stages.sh \
+            --ecc "$PWD/dist/ecc-bundle/ecc" \
+            --designs-dir designs \
+            --design "${{ matrix.design }}" \
+            --out-root "$RUNNER_TEMP/e2e" \
+            --stage physical
+
+      - name: Run STA (RCX+STA)
+        run: |
+          bash nix/scripts/run-signoff-stages.sh \
+            --ecc "$PWD/dist/ecc-bundle/ecc" \
+            --designs-dir designs \
+            --design "${{ matrix.design }}" \
+            --out-root "$RUNNER_TEMP/e2e" \
+            --stage sta
+
+      - name: Run power/EMIR
+        run: |
+          bash nix/scripts/run-signoff-stages.sh \
+            --ecc "$PWD/dist/ecc-bundle/ecc" \
+            --designs-dir designs \
+            --design "${{ matrix.design }}" \
+            --out-root "$RUNNER_TEMP/e2e" \
+            --stage ir_em
 
       - name: Lit check flow artifacts
         run: |
