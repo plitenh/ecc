@@ -20,7 +20,7 @@ from ..parameter import (
 from ..parameter import (
     load_parameter as load_parameter,
 )
-from ..pdk import PDK, get_pdk
+from ..pdk import PDK, get_pdk, invalid_io_liberty_errors
 from ..types import (
     SkippableStepEnum,
     StepBaseEnum,
@@ -228,6 +228,8 @@ _STEP_CONFIG_KEYS: Final[dict[tuple[StepBaseEnum, str], tuple[str, ...]]] = {
     (StepEnum.STA, "ecc"): ("db", StepEnum.RCX.value, StepEnum.STA.value),
     (StepEnum.EMIR, "ecc"): ("db", StepEnum.EMIR.value),
     (StepEnum.PLACEMENT, "dreamplace"): ("dreamplace",),
+    (SkippableStepEnum.DIFF_OPT, "dreamplace"): ("dreamplace",),
+    (StepEnum.DIFF_BUFFERING, "dreamplace"): ("dreamplace",),
     (StepEnum.DIFF_SIZING, "dreamplace"): ("dreamplace",),
     (StepEnum.LEGALIZATION, "dreamplace"): ("dreamplace",),
     (SkippableStepEnum.TIMING_OPT, "sizer"): ("db", "sizer", "dreamplace"),
@@ -537,6 +539,11 @@ def _refresh_sta_config(workspace: Workspace) -> None:
             else str((workspace.pdk.root or Path("")) / path.lstrip(os.sep))
             for path in liberty.get("path", [])
         ]
+    errors = invalid_io_liberty_errors(
+        path for liberty in sta.get("liberty", []) for path in liberty["path"]
+    )
+    if errors:
+        raise ValueError("STA liberty validation failed:\n  " + "\n  ".join(errors))
 
     json_write(workspace.config[f"{StepEnum.STA.value}"], sta)
 

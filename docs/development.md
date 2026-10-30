@@ -83,8 +83,8 @@ environment.
 
 ```bash
 # Format and lint
-uv run ruff format chipcompiler/ test/ ecc_experience/
-uv run ruff check chipcompiler/ test/ ecc_experience/
+uv run ruff format chipcompiler/ test/
+uv run ruff check chipcompiler/ test/
 
 # Type check (basedpyright is the gate; ty is a cross-check)
 uv run basedpyright
@@ -117,6 +117,20 @@ uv run prek install --config .pre-commit-config.yaml --hook-type pre-commit --ho
 ```
 
 ## Testing
+
+The default timing optimization flow after placement is
+`place → diff_sizing → CTS → legalization → Timing optimization → route`.
+Set `[flow] skip_steps = ["lec"]` to insert the optional `diff_opt` step
+between `place` and `diff_sizing`. It runs the placement-parasitic discrete sizing/buffering controller,
+while the legacy `diff_buffering` name remains an alias for existing workspaces.
+The controller's ordered mode/flow tuple configuration is documented in
+[the configuration reference](../chipcompiler/docs/ecc-config-ref.en.md).
+The legacy alias runs the same placement-parasitic controller and
+commits physical buffers, and legalizes with zero padding. Its independent
+round count, selection fraction and objective coefficients are documented in
+[the configuration reference](../chipcompiler/docs/ecc-config-ref.en.md).
+`diff_sizing` remains the DreamPlace standalone GR S50 lane; `Timing optimization`
+is the separate ECC-Sizer step after CTS and legalization.
 
 ```bash
 uv run pytest test/
@@ -785,8 +799,9 @@ and EM limits are invented test data, **not foundry data**. A successful CI run
 with this fixture verifies execution and data handoff only; its IR/EM numbers
 must not be used for signoff. Normal projects do not select it automatically.
 
-Three optional steps can be excluded from a workspace at creation time:
-the synthesis LEC (`lec`), the post-route LEC (`postRouteLec`), and timing
+Four optional steps can be excluded from a workspace at creation time:
+the synthesis LEC (`lec`), placement-parasitic optimization (`diff_opt`),
+the post-route LEC (`postRouteLec`), and timing
 optimization (`Timing optimization`). Skipped steps never enter the
 workspace's execution ledger — their inputs fall through to the previous
 retained step, and no step directory is created for them. State-machine,
@@ -800,14 +815,16 @@ The policy is declared on two surfaces, with the common precedence
 1. `ecc.toml` → `[flow] skip_steps` (project level; an explicit
    declaration — including an empty list — wins over the workspace entry),
 2. `project.json` → `workspaces[].skip_steps` (per-workspace base layer),
-3. code default `("lec",)` when neither declares the key.
+3. code default `("lec", "diff_opt")` when neither declares the key.
 
 When both surfaces declare the policy with different effective values,
 `ecc run`/`ecc check` emit a `skip_steps_shadowed` warning naming the
 winning source.
 
-An explicit `skip_steps = []` runs every step and is the only way to
-enable the synthesis LEC. Selecting the `synthesis_lec` preset while the
+Set `skip_steps = ["lec"]` to enable `diff_opt` while leaving synthesis LEC
+disabled, or `["diff_opt"]` to enable synthesis LEC alone.
+An explicit `skip_steps = []` runs every step, enabling both.
+Selecting the `synthesis_lec` preset while the
 effective policy skips `lec` is a creation-time configuration error; the
 fix is `skip_steps = []`. Entries accept the same aliases as flow ranges
 (e.g. `LEC`, `postlec`, `TimingOpt`) and are validated against the
@@ -816,8 +833,8 @@ skippable set.
 ```toml
 [flow]
 preset = "rtl2gds"
-# LEC is skipped by default; clear the list to enable it.
-skip_steps = ["lec"]
+# Remove diff_opt to enable it; clear the list to also enable synthesis LEC.
+skip_steps = ["lec", "diff_opt"]
 ```
 
 ### Reports
@@ -872,7 +889,7 @@ root = "/path/to/ics55"
 
 [flow]
 preset = "rtl2gds" # rtl2gds | syn_sta | synthesis_lec
-# Optional: skip_steps = ["lec"] (default); [] runs everything (enables LEC)
+# Optional: skip_steps = ["lec", "diff_opt"] (default); [] runs everything
 ```
 
 For filelist mode, set `design.rtl` to a single filelist path, for example
@@ -1126,45 +1143,6 @@ For Python-level debugging, invoke the same CLI module directly:
 4. Use `clear_states()` to re-run.
 
 ## Conventions
-
-### Experience collection ownership
-
-`ecc_experience/` is a sibling of `chipcompiler/` and `agent/`, shipped in the same
-ECC distribution. Its API is `collect(workspace, store)`, `list_cases(store)`,
-`show(case_id, store)`, `verify(case_id, store)`, and project recording operations
-`enable/status/disable/drain`, conservative read-only `recommend`, and generic campaign manifest validation. CLI composition is registered
-only in `chipcompiler/cli/app.py`; core engine/data/tools do not import experience.
-Domain collection accepts an observation-reader Protocol. The chipcompiler adapter
-uses read-only snapshot APIs and the existing nonblocking workspace lock.
-
-Cases are immutable, content-addressed observations. Store writes have one collector,
-staged digest verification and atomic directory publication. Explicit collection keeps
-attempt identity unknown; P1 recording allocates attempt IDs and writes non-fatal
-post-commit events to a project outbox. `drain` verifies the final snapshot before
-materializing a case. Parameter evidence is configured/unknown and input closure and
-process fingerprints remain unverified. Verification separates archive integrity from
-unknown provenance or unavailable metrics. Recommendations remain a later delivery
-stage.
-
-Run `uv run pytest test/experience test/cli/commands/test_experience.py test/engine/test_execution.py`
-for the narrow
-contract suite. `packaging/experience_cli_smoke.py` exercises public CLI collection,
-idempotence, queries and corruption rejection against a supplied project/workspace.
-The packaged design matrix runs this after the existing flow artifact checks. Keep
-stores, benchmarks and build output outside source trees; do not package private cases.
-
-Campaign manifests are validated and tracked by `ecc_experience.benchmark` without
-importing private benchmark layouts or starting EDA. `campaign init` freezes the manifest
-fingerprint in an output-local ledger, `campaign record` appends idempotent trial facts, and
-`campaign status` verifies the fingerprint before reporting resumable progress. `campaign
-summary` joins the latest trial state with linked case verification without treating a trial
-pass as QoR or signoff success. `experience plan` writes a fingerprinted, manual-review
-optimization plan and never applies parameters or starts EDA. `experience evaluate` compares
-two evidence-backed cases read-only when their input fingerprints match and their evidence
-has no failures. `experience release create/verify` freezes and rechecks only fully verified
-cases, without copying private paths or enabling automatic application. `recommend` and
-`plan` can bind retrieval to a verified release. The user procedures are documented in the
-[experience testing manual](../ecc_experience/docs/ecc-experience-testing-guide.en.md).
 
 Contributor conventions are not repeated here; they live in
 [../CLAUDE.md](../CLAUDE.md) (behavioral guidelines, test placement, module
