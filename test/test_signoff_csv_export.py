@@ -201,7 +201,6 @@ class TestSignoffThresholdGates:
         assert evaluate_metric_gate({"present": "true", "value": "0"}, spec) == "pass"
 
 
-
 SIGNOFF_CRITERIA = [
     (
         "drc-zero-violations",
@@ -301,7 +300,9 @@ SIGNOFF_CRITERIA = [
     ),
     (
         "harden-final-db",
-        ChecklistItemSpec(id="quality.harden.complete", require_state="pass", require_blocked=False),
+        ChecklistItemSpec(
+            id="quality.harden.complete", require_state="pass", require_blocked=False
+        ),
         {"present": "true", "state": "pass", "blocked": "false"},
         {"present": "true", "state": "fail", "blocked": "false"},
     ),
