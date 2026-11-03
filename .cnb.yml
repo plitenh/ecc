@@ -1,0 +1,23 @@
+# CNB mirror: https://cnb.cool/ecoslab/ecc
+# Workspaces: launch an online cloud container from this repository's
+# devcontainer image. The CNB mirror provides a domestic image pull path
+# and 64-core on-demand cloud runners for interactive use.
+$:
+  vscode:
+    - name: ecc-workspace
+      runner:
+        cpus: 64
+      services:
+        - vscode
+      docker:
+        build:
+          dockerfile: .devcontainer/Dockerfile
+          target: devcontainer
+        volumes:
+          - uv-cache:/root/.cache/uv:copy-on-write
+          - pip-cache:/root/.cache/pip:copy-on-write
+      env:
+        CNB_WELCOME_CMD: bash /workspace/.devcontainer/cnb-welcome.sh
+      stages:
+        - name: workspace-ready
+          script: echo "ECC cloud workspace created"
