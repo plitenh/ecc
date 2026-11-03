@@ -146,10 +146,27 @@ jobs:
           "${CHIPCOMPILER_KEPLER_FORMAL_ROOT}/bin/kepler-formal" --version
 
   test:
-    name: Test
+    name: Test (${{ matrix.suite }})
     needs: [check-version, list-versions, prepare-test-tools, pdk, sizer]
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_34_x86_64
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: cli
+            paths: test/cli
+          - suite: tools
+            paths: test/tools
+          - suite: rest
+            paths: >-
+              test/data test/engine test/rtl2gds test/analysis test/formal
+              test/integration test/lit test/packaging test/project test/regression
+              test/runtime test/utility test/yosys_lec test/test_conftest_import.py
+              test/test_engine_flow.py test/test_engine_rerun.py test/test_qor_report.py
+              test/test_signoff_csv_export.py test/test_signoff_package.py
+              test/test_signoff_report.py
+            agent: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -224,9 +241,10 @@ jobs:
           "${CHIPCOMPILER_KEPLER_FORMAL_ROOT}/bin/kepler-formal" --version
 
       - name: Pytest
-        run: uv run --no-sync pytest test/ -v --basetemp=pytest-tmp --cov=chipcompiler --cov-report=
+        run: uv run --no-sync pytest ${{ matrix.paths }} -v --basetemp=pytest-tmp --cov=chipcompiler --cov-report=
 
       - name: Pytest (agent)
+        if: matrix.agent
         run: uv run --no-sync pytest agent/test -v --basetemp=pytest-agent-tmp
 
       - name: Prune test fixture symlinks before log upload
@@ -237,7 +255,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: integration-flow-logs
+          name: integration-flow-logs-${{ matrix.suite }}
           if-no-files-found: ignore
           path: |
             pytest-tmp/**/home/flow.json
