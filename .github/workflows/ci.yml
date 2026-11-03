@@ -156,8 +156,10 @@ jobs:
         include:
           - suite: cli
             paths: test/cli
+            toolkit: none
           - suite: tools
             paths: test/tools
+            toolkit: full
           - suite: rest
             paths: >-
               test/data test/engine test/rtl2gds test/analysis test/formal
@@ -166,6 +168,7 @@ jobs:
               test/test_engine_flow.py test/test_engine_rerun.py test/test_qor_report.py
               test/test_signoff_csv_export.py test/test_signoff_package.py
               test/test_signoff_report.py
+            toolkit: full
             agent: true
     steps:
       - name: Checkout
@@ -179,18 +182,21 @@ jobs:
           build-all: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs['build-all'] == 'true' && 'true' || 'false' }}
 
       - name: Setup PDK
+        if: matrix.toolkit == 'full'
         uses: actions/download-artifact@v4
         with:
           name: icsprout55-pdk
           path: ../pdk
 
       - name: Extract PDK
+        if: matrix.toolkit == 'full'
         run: |
           mkdir -p ../pdk/icsprout55-pdk
           tar -xzf ../pdk/icsprout55-pdk.tar.gz -C ../pdk/icsprout55-pdk
           test -s ../pdk/icsprout55-pdk/techfile/icsprout55.layermap
 
       - name: Setup OSS CAD Suite
+        if: matrix.toolkit == 'full'
         uses: ./.github/actions/setup-oss-cad-suite-cached
         with:
           version: ${{ needs.list-versions.outputs.oss_cad_suite_version }}
@@ -198,11 +204,13 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Sizer
+        if: matrix.toolkit == 'full'
         uses: actions/download-artifact@v4
         with:
           name: ecc-sizer
 
       - name: Extract Sizer
+        if: matrix.toolkit == 'full'
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/ecc-sizer"
@@ -211,6 +219,7 @@ jobs:
           echo "CHIPCOMPILER_ECC_SIZER_ROOT=$RUNNER_TEMP/ecc-sizer" >> "$GITHUB_ENV"
 
       - name: Verify Sizer
+        if: matrix.toolkit == 'full'
         shell: bash
         run: |
           sizer_path="$(command -v Sizer)"
@@ -219,6 +228,7 @@ jobs:
           test -x "${CHIPCOMPILER_ECC_SIZER_ROOT}/libexec/Sizer"
 
       - name: Setup kepler-formal
+        if: matrix.toolkit == 'full'
         id: install
         uses: ./.github/actions/install-ci-tool
         with:
@@ -235,6 +245,7 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: Verify kepler-formal
+        if: matrix.toolkit == 'full'
         run: |
           test '${{ steps.install.outputs.head-sha }}' = '${{ needs.list-versions.outputs.kepler_formal_git_commit }}'
           command -v kepler-formal
