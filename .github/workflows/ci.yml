@@ -932,8 +932,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Verify signoff CSV failure modes
-        run: bash .github/scripts/signoff-csv-test.sh
-
+        run: bash nix/scripts/signoff_csv/test.sh
       - name: Download E2E signoff CSV artifacts
         if: always()
         continue-on-error: true
@@ -982,8 +981,7 @@ jobs:
         if: always()
         env:
           EXPECTED_DESIGNS: ${{ needs.e2e-designs.outputs.designs }}
-        run: node .github/scripts/signoff-csv-summary.js
-
+        run: node nix/scripts/signoff_csv/summary.js
       - name: Upload CSV evidence
         if: always()
         continue-on-error: true

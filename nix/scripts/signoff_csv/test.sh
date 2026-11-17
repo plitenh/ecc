@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Negative-path checks for the standalone signoff CSV collector.
-# Usage: signoff-csv-test.sh
+# Usage: nix/scripts/signoff_csv/test.sh
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-root="$(cd "${here}/../.." && pwd)"
+root="$(cd "${here}/../../.." && pwd)"
 fixture_sh="${root}/nix/scripts/signoff-csv-fixture.sh"
-export_sh="${root}/nix/scripts/signoff_csv/export.sh"
-summary_js="${root}/.github/scripts/signoff-csv-summary.js"
+export_sh="${here}/export.sh"
+summary_js="${here}/summary.js"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "${tmp}"' EXIT

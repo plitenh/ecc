@@ -94,7 +94,7 @@ from `Synthesis`, `postFloorplan`, and `Harden` outputs.
 nix run .#signoff-csv-fixture -- --workspace /tmp/signoff-workspace
 ```
 
-Negative-path coverage lives in `.github/scripts/signoff-csv-test.sh` and runs in CI.
+Negative-path coverage lives in `nix/scripts/signoff_csv/test.sh` and runs in CI.
 
 ## CLI
 
