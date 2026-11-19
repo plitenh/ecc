@@ -35,6 +35,7 @@ from .schema_versions import (
     SUPPORTED_SCHEMA_VERSIONS,
     ensure_supported_schema_version,
 )
+from .types import coerce_bool_flag
 
 logger = logging.getLogger(__name__)
 
@@ -104,22 +105,11 @@ def parameters_have_chip_identity(data: object) -> bool:
 FLOW_POLICY_KEYS = ("skip_steps", "lec_engine", "insert_steps", "no_clock")
 
 
-def coerce_bool(value: object) -> bool:
-    """Normalize TOML booleans and common string spellings to a bool."""
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return value != 0
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "on"}
-    return bool(value)
-
-
 def flow_no_clock(flow: object) -> bool:
     """Whether a ``[flow]`` section enables no-clock mode."""
     if not isinstance(flow, dict):
         return False
-    return coerce_bool(flow.get("no_clock", False))
+    return coerce_bool_flag(flow.get("no_clock", False))
 
 
 def validate_flow_config(flow: object) -> dict:

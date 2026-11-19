@@ -15,6 +15,7 @@ from chipcompiler.data import (
     StepBaseEnum,
     StepEnum,
     ToolName,
+    coerce_bool_flag,
     inserted_step_kind,
 )
 from chipcompiler.data.types import INSERTED_STEP_MARK
@@ -46,17 +47,6 @@ class NoClockDecision:
     source: str  # explicit | inferred | off
 
 
-def _coerce_no_clock_flag(value: object) -> bool:
-    """Normalize a declared no_clock value without coupling to the data layer."""
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return value != 0
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "on"}
-    return bool(value)
-
-
 def _clock_name_from_materials(materials: Mapping[str, object]) -> str:
     """Stripped clock name from materials; empty means no clock declared."""
     if "clock_port" in materials:
@@ -83,7 +73,7 @@ def resolve_no_clock(
     """
     flag: bool | None = None
     if isinstance(flow_config, Mapping) and "no_clock" in flow_config:
-        flag = _coerce_no_clock_flag(flow_config["no_clock"])
+        flag = coerce_bool_flag(flow_config["no_clock"])
     if flag is True:
         return NoClockDecision(enabled=True, source=NO_CLOCK_SOURCE_EXPLICIT)
     if flag is False:
