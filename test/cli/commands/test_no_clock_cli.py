@@ -1,7 +1,10 @@
 """CLI/config integration for effective no-clock decisions."""
 
+from pathlib import Path
+
 import pytest
 
+from chipcompiler.cli import main as cli_main
 from chipcompiler.cli.core.types import CommandContext, CommandResult, OutputMode
 from chipcompiler.cli.project.config import (
     ProjectNoClockDecisionResolver,
@@ -113,6 +116,7 @@ def test_missing_project_config_does_not_infer_no_clock():
         ),
         ("true", "clk", 0, ["design.frequency_mhz must be greater than 0"]),
         (None, "clk", 100, []),
+        (None, "   ", 0, []),
     ],
 )
 def test_no_clock_timing_validation(tmp_path, no_clock, clock, frequency, expected):
@@ -151,6 +155,20 @@ def test_attach_no_clock_leaves_inference_and_insert_steps_unchanged(tmp_path):
     assert attached == {"insert_steps": ["lec@routing"], "no_clock": True}
     assert flow_config == {"insert_steps": ["lec@routing"]}
     assert effective_insert_steps(cfg, attached) == ("lec@routing",)
+
+
+def test_virgin_project_passes_explicit_no_clock_to_workspace_creation(
+    create_cli_project, flow_mocks
+):
+    project_dir = create_cli_project()
+    with Path(project_dir, "ecc.toml").open("a") as config_file:
+        config_file.write("no_clock = true\n")
+
+    rc = cli_main.run(["run", "--project", project_dir])
+
+    assert rc == 0
+    flow_config = flow_mocks.capture["create_kwargs"]["flow_config"]
+    assert flow_config["no_clock"] is True
 
 
 def test_effective_config_carries_no_clock_without_losing_inserts(tmp_path, manifest_stubs):

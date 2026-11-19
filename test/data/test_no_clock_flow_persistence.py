@@ -2,7 +2,9 @@
 
 import pytest
 
+from chipcompiler.data import create_workspace, load_workspace
 from chipcompiler.data.types import SkippableStepEnum
+from chipcompiler.data.workspace import build_dynamic_flow_data
 from chipcompiler.data.workspace_config import (
     flow_no_clock,
     flow_section_from_flow_config,
@@ -16,6 +18,45 @@ _NO_CLOCK_SKIPS = [
     SkippableStepEnum.CTS.value,
     SkippableStepEnum.TIMING_OPT.value,
 ]
+
+
+def test_build_dynamic_flow_data_infers_no_clock_from_materials():
+    flow_data = build_dynamic_flow_data(
+        {"preset": "rtl2gds"}, materials={"clock_port": ""}
+    )
+
+    step_names = [step["name"] for step in flow_data["steps"]]
+    assert "synthesis" in step_names
+    assert set(step_names).isdisjoint(_NO_CLOCK_SKIPS)
+
+
+def test_create_workspace_persists_inferred_no_clock(
+    tmp_path, minimal_ics55_pdk_factory, default_ics55_parameters
+):
+    pdk_root = minimal_ics55_pdk_factory(tmp_path / "ics55")
+    rtl_path = tmp_path / "gcd.v"
+    rtl_path.write_text("module gcd(output y); assign y = 1'b0; endmodule\n")
+    workspace_dir = tmp_path / "workspace"
+
+    workspace = create_workspace(
+        directory=workspace_dir,
+        origin_def="",
+        origin_verilog=rtl_path,
+        pdk="ics55",
+        parameters={**default_ics55_parameters, "clock": ""},
+        pdk_root=pdk_root,
+        flow_config={"preset": "rtl2gds"},
+    )
+
+    assert workspace is not None
+    persisted = load_workspace(str(workspace_dir))
+    step_names = [step["name"] for step in persisted.flow.steps()]
+    assert set(step_names).isdisjoint(_NO_CLOCK_SKIPS)
+    assert persisted.parameters.data["_flow"] == {
+        "preset": "rtl2gds",
+        "no_clock": True,
+        "skip_steps": _NO_CLOCK_SKIPS,
+    }
 
 
 def test_validate_flow_config_preserves_no_clock_and_folds_skips():

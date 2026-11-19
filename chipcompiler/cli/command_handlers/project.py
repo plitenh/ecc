@@ -786,8 +786,10 @@ def _run_project(
             return CommandResult.err([error_record("missing_config")])
         # Virgin projects have no manifest layer; an ecc.toml skip policy
         # still rides on the flow config (policy-only when no range applies).
+        from chipcompiler.cli.project.config import ProjectNoClockDecisionResolver
         from chipcompiler.cli.project.effective_config import (
             _attach_lec_engine,
+            _attach_no_clock,
             _attach_skip_steps,
         )
         from chipcompiler.cli.project.manifest_flow import (
@@ -807,6 +809,8 @@ def _run_project(
             else None
         )
         flow_config = _attach_lec_engine(flow_config, lec_engine)
+        no_clock_decision = ProjectNoClockDecisionResolver(cfg).resolve()
+        flow_config = _attach_no_clock(flow_config, no_clock_decision=no_clock_decision)
         flow_config = attach_insert_steps(flow_config, declared_insert_steps(cfg))
 
     if cfg is None:
