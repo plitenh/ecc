@@ -8,6 +8,7 @@ from chipcompiler.cli.command_handlers import report_snapshot as snapshot_handle
 from chipcompiler.cli.core.apps import create_app
 from chipcompiler.cli.core.inputs import (
     ReportChecklistInput,
+    ReportPpaInput,
     ReportQorInput,
     ReportStepInput,
     ReportSummaryInput,
@@ -25,7 +26,7 @@ from chipcompiler.cli.core.project_report_inputs import ReportProjectInput
 from chipcompiler.cli.core.snapshot_inputs import ReportSnapshotInput
 
 report_app = create_app(
-    help="Generate design-summary, QoR score, checklist, step reports, and saved snapshots"
+    help="Generate design-summary, QoR score, checklist, step, PPA CSV, and snapshot reports"
 )
 
 OutputPathOption = Annotated[
@@ -108,6 +109,24 @@ def checklist_cmd(
         output_path=output_path,
     )
     _finish("checklist", command_input, report_handlers.checklist)
+
+
+@report_app.command("ppa", help="Write normalized STA/power/area metrics as CSV")
+def ppa_cmd(
+    *,
+    output_path: OutputPathOption = None,
+    project: ProjectOption = None,
+    workspace: WorkspaceOption = None,
+    plain: PlainOption = False,
+    json_output: JsonOption = False,
+) -> None:
+    command_input = ReportPpaInput(
+        output=output_options(plain=plain, json_output=json_output),
+        project=project_options(project),
+        workspace=workspace,
+        output_path=output_path,
+    )
+    _finish("ppa", command_input, report_handlers.ppa)
 
 
 @report_app.command("summary", help="Write the text design summary report")

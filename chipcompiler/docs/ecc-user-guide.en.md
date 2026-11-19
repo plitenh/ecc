@@ -148,7 +148,7 @@ Commands:
   process       Inspect, cancel, or reconcile ECC run processes
   workspace     Import or refresh managed workspaces
   signoff       Inspect and export signoff packages
-  report        Generate design-summary, QoR score, checklist, step reports, and saved snapshots
+  report        Generate design-summary, QoR score, checklist, step, PPA CSV, and snapshot reports
   compare       Compare saved Engineering Snapshots without running EDA tools
   reproducible  Export and verify reproducible ECC evidence packages
   sweep         Run deterministic parameter sweeps
@@ -210,7 +210,7 @@ Every command and subcommand at a glance (semantics, options, and examples in th
 | `ecc process inspect / cancel / reconcile` | inspect, cancel, or reconcile run processes | §6.5 |
 | `ecc workspace create / import / derive / archive / delete / reset-flow / refresh / reconcile-deletes` | workspace lifecycle management | §8.5 |
 | `ecc signoff inspect / check / export` | signoff readiness, quality gates, package export | §11 |
-| `ecc report summary / qor / checklist / step / snapshot / project` | design summary, QoR score, checklist, per-step evidence, snapshots, project matrix | §12 |
+| `ecc report summary / qor / checklist / step / ppa / snapshot / project` | design summary, QoR score, checklist, per-step evidence, PPA CSV, snapshots, project matrix | §12 |
 | `ecc compare run` | compare two Engineering Snapshots | §12.6 |
 | `ecc reproducible export / inspect / verify / report` | export/inspect/verify/summarize reproducible evidence packages | §11.5 |
 | `ecc sweep create / show / list / run / compare / verify` | deterministic parameter sweeps | §11.5 |
@@ -1585,13 +1585,14 @@ formats remain supported. The signoff QoR gate uses the same score reader. Missi
 or invalid scores are unavailable; corrupt checklists are never diagnosed as passed. Flow
 completion and blocked checklist results are reported separately.
 
-## 12. report — design summary, QoR score, checklist, and step evidence
+## 12. report — design summary, QoR score, checklist, step evidence, and PPA CSV
 
 ```bash
 ecc report summary    [-o PATH] [--project DIR] [--workspace NAME] [--plain]
 ecc report qor        [-o PATH] [--project DIR] [--workspace NAME] [--plain]
 ecc report checklist  [-o PATH] [same selector and output options]
 ecc report step       [STEP] [--section feature|analysis|checklist|outputs]... [same selector and output options]
+ecc report ppa        [-o PATH] [same selector and output options]
 ecc report snapshot --output PATH [--project DIR] [--workspace NAME] [--plain|--json]
 ecc report project [--project DIR] [--plain|--json]
 ```
@@ -1936,6 +1937,7 @@ ecc report summary                 # text design summary (signoff/<design>_desig
 ecc report qor                     # QoR overall score report (signoff/<design>_qor_report.txt)
 ecc report checklist               # signoff checklist report (signoff/checklist_report.txt)
 ecc report step drc                # preview one step's feature/analysis/checklist (read-only)
+ecc report ppa                     # normalized STA/power/area CSV (signoff/<design>_ppa.csv)
 ecc gdsview --workspace default --step Harden
 ecc chipview --workspace default --step filler
 ```
