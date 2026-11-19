@@ -206,7 +206,7 @@ Commands:
   process       Inspect, cancel, or reconcile ECC run processes
   workspace     Import or refresh managed workspaces
   signoff       Inspect and export signoff packages
-  report        Generate design-summary, QoR score, checklist, step reports, and saved snapshots
+  report        Generate design-summary, QoR score, checklist, step, PPA CSV, and snapshot reports
   compare       Compare saved Engineering Snapshots without running EDA tools
   reproducible  Export and verify reproducible ECC evidence packages
   sweep         Run deterministic parameter sweeps
@@ -268,7 +268,7 @@ eval "$(ecc --show-completion)"     # 自动探测当前 shell
 | `ecc process inspect / cancel / reconcile` | 运行进程的查看/取消/恢复 | §6.5 |
 | `ecc workspace create / import / derive / archive / delete / reset-flow / refresh / reconcile-deletes` | workspace 生命周期管理 | §8.5 |
 | `ecc signoff inspect / check / export` | 签核就绪度、质量门禁、导出签核包 | §11 |
-| `ecc report summary / qor / checklist / step / snapshot / project` | 设计总结、QoR 计分、清单、单步证据、快照、项目矩阵 | §12 |
+| `ecc report summary / qor / checklist / step / ppa / snapshot / project` | 设计总结、QoR 计分、清单、单步证据、PPA CSV、快照、项目矩阵 | §12 |
 | `ecc compare run` | 比较两份 Engineering Snapshot | §12.6 |
 | `ecc reproducible export / inspect / verify / report` | 可复现证据包的导出/查看/校验/汇总 | §11.5 |
 | `ecc sweep create / show / list / run / compare / verify` | 确定性参数扫描 | §11.5 |
@@ -1576,13 +1576,14 @@ ecc diagnose run --project /path/to/project --workspace ws_0012 --json
 signoff 的 QoR gate 使用同样的分数读取规则。缺失、未评级或无效分数不会被视为可用 QoR，
 损坏 checklist 不会被诊断为 passed；执行完成与 checklist blocked 会分别报告。
 
-## 12. report — 设计总结、QoR 总分、checklist 与单步证据
+## 12. report — 设计总结、QoR 总分、checklist、单步证据与 PPA CSV
 
 ```bash
 ecc report summary [-o PATH] [--project DIR] [--workspace NAME] [--plain]
 ecc report qor     [-o PATH] [--project DIR] [--workspace NAME] [--plain]
 ecc report checklist [-o PATH] [同样的 selector 与输出选项]
 ecc report step    [STEP] [--section feature|analysis|checklist|outputs]... [同样的 selector 与输出选项]
+ecc report ppa       [-o PATH] [同样的 selector 与输出选项]
 ecc report snapshot --output PATH [--project DIR] [--workspace NAME] [--plain|--json]
 ecc report project [--project DIR] [--plain|--json]
 ```
@@ -2118,6 +2119,7 @@ ecc report summary                 # 生成文本设计总结（signoff/<design>
 ecc report qor                     # QoR 总分报告（signoff/<design>_qor_report.txt）
 ecc report checklist               # 签核清单报告（signoff/checklist_report.txt）
 ecc report step drc                # 终端预览单步骤 feature/analysis/checklist（只读）
+ecc report ppa                     # 归一化 STA/功耗/面积 CSV（signoff/<design>_ppa.csv）
 ecc gdsview --workspace default --step Harden
 ecc chipview --workspace default --step filler
 ```

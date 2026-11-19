@@ -252,6 +252,14 @@ class ReportSummaryInput:
 
 
 @dataclass(frozen=True)
+class ReportPpaInput:
+    output: OutputOptions
+    project: ProjectOptions = ProjectOptions()
+    workspace: str | None = None
+    output_path: str | None = None
+
+
+@dataclass(frozen=True)
 class ParamListInput:
     output: OutputOptions
     project: ProjectOptions
