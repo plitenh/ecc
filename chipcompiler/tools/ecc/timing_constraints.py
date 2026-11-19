@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from chipcompiler.data import StepEnum, Workspace, WorkspaceStep
+from chipcompiler.data import SkippableStepEnum, Workspace, WorkspaceStep
 from chipcompiler.data.handshake import input_design_states, load_request
 from chipcompiler.data.handshake.files import HandshakeError
 from chipcompiler.data.types import DesignState
@@ -57,7 +57,7 @@ def _reads_clock_tree(step: WorkspaceStep) -> bool:
         if request is not None and request.design_source is not None:
             return DesignState.CLOCK_TREE in input_design_states(request)
     names = rtl2gds_step_names()
-    return names.index(step.name) > names.index(StepEnum.CTS.value)
+    return names.index(step.name) > names.index(SkippableStepEnum.CTS.value)
 
 
 def prepare_timing_context(

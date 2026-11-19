@@ -7,13 +7,13 @@ import shutil
 from pathlib import Path
 from typing import Any, Final
 
-from chipcompiler.data import StepEnum
+from chipcompiler.data import SkippableStepEnum, StepEnum
 from chipcompiler.data.step import StepDirectories
 from chipcompiler.data.workspace.flow_options import clock_tree_requested
 
 # Steps whose clock network ecc-tools can capture into the geometry snapshot.
 CLOCK_TREE_STEPS: Final = frozenset(
-    {StepEnum.POST_FLOORPLAN.value, StepEnum.CTS.value, StepEnum.FILLER.value}
+    {StepEnum.POST_FLOORPLAN.value, SkippableStepEnum.CTS.value, StepEnum.FILLER.value}
 )
 
 FILLER_RC_CORNER = "TYPICAL"

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from chipcompiler.data import PDK, OriginDesign, StepEnum, Workspace
+from chipcompiler.data import PDK, OriginDesign, SkippableStepEnum, StepEnum, Workspace
 from chipcompiler.data.workspace import init_workspace_config
 from chipcompiler.params import (
     build_step_params,
@@ -63,7 +63,7 @@ def test_public_s50_coefficients_survive_step_resolution_without_changing_placem
     )
     step = builder.build_step(
         workspace,
-        StepEnum.DIFF_SIZING.value,
+        SkippableStepEnum.DIFF_SIZING.value,
         input_def=tmp_path / "input.def",
         input_verilog=tmp_path / "input.v",
     )
@@ -325,7 +325,7 @@ def test_public_lut_action_mode_survives_step_resolution(
     )
     step = builder.build_step(
         workspace,
-        StepEnum.DIFF_SIZING.value,
+        SkippableStepEnum.DIFF_SIZING.value,
         input_def=tmp_path / "input.def",
         input_verilog=tmp_path / "input.v",
     )

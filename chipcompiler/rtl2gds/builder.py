@@ -28,11 +28,11 @@ _RTL2GDS_CHAIN: Final[tuple[tuple[StepBaseEnum, str | None], ...]] = (
     (StepEnum.PRE_FLOORPLAN, ToolName.ECC.value),
     (StepEnum.MACRO_PLACEMENT, ToolName.DREAMPLACE.value),
     (StepEnum.POST_FLOORPLAN, ToolName.ECC.value),
-    (StepEnum.PREPLACE, ToolName.SIZER.value),
+    (SkippableStepEnum.PREPLACE, ToolName.SIZER.value),
     (StepEnum.PLACEMENT, ToolName.DREAMPLACE.value),
     (SkippableStepEnum.DIFF_OPT, ToolName.DREAMPLACE.value),
-    (StepEnum.DIFF_SIZING, ToolName.DREAMPLACE.value),
-    (StepEnum.CTS, ToolName.ECC.value),
+    (SkippableStepEnum.DIFF_SIZING, ToolName.DREAMPLACE.value),
+    (SkippableStepEnum.CTS, ToolName.ECC.value),
     (StepEnum.LEGALIZATION, ToolName.DREAMPLACE.value),
     (SkippableStepEnum.TIMING_OPT, ToolName.SIZER.value),
     (StepEnum.ROUTING, ToolName.ECC.value),
@@ -156,7 +156,7 @@ def resolve_insert_steps(flow_config: Mapping[str, object] | None) -> tuple[str,
         if not mark or not step.strip() or not after.strip():
             raise ValueError(
                 f"insert_steps entry {entry!r} must be STEP{INSERTED_STEP_MARK}AFTER, "
-                f"for example lec{INSERTED_STEP_MARK}{StepEnum.CTS.value}"
+                f"for example lec{INSERTED_STEP_MARK}{SkippableStepEnum.CTS.value}"
             )
         if step.strip() not in INSERTABLE_FLOW_STEPS:
             raise ValueError(

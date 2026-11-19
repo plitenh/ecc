@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from chipcompiler.data import StepEnum
+from chipcompiler.data import SkippableStepEnum, StepEnum
 from chipcompiler.data.step_config_reads import ConfigRead
 
 from .builder import build_step, build_step_config, build_step_space
@@ -39,7 +39,7 @@ STEP_CONFIG_READS = {
         ConfigRead("macro_location"),
     ),
     StepEnum.PLACEMENT: (ConfigRead("db"),),
-    StepEnum.CTS: (ConfigRead("db"), ConfigRead("cts")),
+    SkippableStepEnum.CTS: (ConfigRead("db"), ConfigRead("cts")),
     StepEnum.ROUTING: (ConfigRead("db"), ConfigRead("routing")),
     StepEnum.DRC: (ConfigRead("db"), ConfigRead("drc")),
     StepEnum.ANTENNA_CHECK: (ConfigRead("db"),),

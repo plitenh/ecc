@@ -20,11 +20,12 @@ from ..parameter import (
 from ..pdk import PDK, get_pdk, invalid_io_liberty_errors
 from ..step_config_reads import step_config_keys as step_config_keys
 from ..types import (
-    StateEnum as StateEnum,
-)
-from ..types import (
+    SkippableStepEnum,
     StepBaseEnum,
     StepEnum,
+)
+from ..types import (
+    StateEnum as StateEnum,
 )
 from ..workspace_config import (
     FLOW_POLICY_KEYS,
@@ -174,7 +175,7 @@ def log_workspace_step(step: WorkspaceStep, logger: Logger):
 
 _WORKSPACE_CONFIG_FILENAMES: Final[dict[str, str]] = {
     "db": "db_ecc.json",
-    StepEnum.CTS.value: "cts_ecc.json",
+    SkippableStepEnum.CTS.value: "cts_ecc.json",
     StepEnum.DRC.value: "drc_ecc.json",
     StepEnum.FLOORPLAN.value: "floorplan_ecc.json",
     "macro_location": "macro_location.tcl",
@@ -479,13 +480,13 @@ def refresh_workspace_config(workspace: Workspace) -> None:
         raise ValueError(f"filler config requires -min_filler_width: {filler_path}")
     json_write(filler_path, {"-min_filler_width": min_filler_width})
 
-    cts = json_read(workspace.config[f"{StepEnum.CTS.value}"])
+    cts = json_read(workspace.config[f"{SkippableStepEnum.CTS.value}"])
     if not cts:
         raise FileNotFoundError(
-            f"CTS config missing or corrupt: {workspace.config[f'{StepEnum.CTS.value}']}"
+            f"CTS config missing or corrupt: {workspace.config[f'{SkippableStepEnum.CTS.value}']}"
         )
     cts["buffer_type"] = workspace.pdk.buffers
-    json_write(workspace.config[f"{StepEnum.CTS.value}"], cts)
+    json_write(workspace.config[f"{SkippableStepEnum.CTS.value}"], cts)
 
     router = json_read(workspace.config[f"{StepEnum.ROUTING.value}"])
     if "RT" not in router:
@@ -521,7 +522,7 @@ def refresh_workspace_config(workspace: Workspace) -> None:
     from .config_overrides import apply_config_overrides
 
     apply_config_overrides(workspace.config, workspace.parameters.data)
-    cts_path = workspace.config[f"{StepEnum.CTS.value}"]
+    cts_path = workspace.config[f"{SkippableStepEnum.CTS.value}"]
     cts = json_read(cts_path)
     if not cts.get("buffer_type") and workspace.pdk.buffers:
         cts["buffer_type"] = workspace.pdk.buffers

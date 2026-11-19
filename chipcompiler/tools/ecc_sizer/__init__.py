@@ -1,4 +1,4 @@
-from chipcompiler.data import SkippableStepEnum, StepEnum
+from chipcompiler.data import SkippableStepEnum
 from chipcompiler.data.step_config_reads import ConfigRead
 
 from .builder import (
@@ -28,7 +28,7 @@ _SIZER_READS = (
     ConfigRead("routing", ("RT", "-top_routing_layer")),
 )
 STEP_CONFIG_READS = {
-    StepEnum.PREPLACE: _SIZER_READS,
+    SkippableStepEnum.PREPLACE: _SIZER_READS,
     SkippableStepEnum.TIMING_OPT: (*_SIZER_READS, ConfigRead("dreamplace")),
 }
 

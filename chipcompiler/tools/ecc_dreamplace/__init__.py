@@ -12,7 +12,7 @@ STEP_CONFIG_READS = {
     StepEnum.MACRO_PLACEMENT: (ConfigRead("dreamplace"), ConfigRead("macro_location")),
     StepEnum.PLACEMENT: (ConfigRead("dreamplace"), ConfigRead("sta")),
     SkippableStepEnum.DIFF_OPT: (ConfigRead("dreamplace"), ConfigRead("sta")),
-    StepEnum.DIFF_SIZING: (ConfigRead("dreamplace"), ConfigRead("sta")),
+    SkippableStepEnum.DIFF_SIZING: (ConfigRead("dreamplace"), ConfigRead("sta")),
     StepEnum.LEGALIZATION: (ConfigRead("dreamplace"),),
 }
 

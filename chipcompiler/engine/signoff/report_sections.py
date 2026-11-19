@@ -5,7 +5,7 @@ Each extractor resolves one metrics family through the shared query helper
 parameters/home fallback), mirroring the GUI extractor's section order.
 """
 
-from chipcompiler.data import StepEnum
+from chipcompiler.data import SkippableStepEnum, StepEnum
 from chipcompiler.engine.signoff.report_data import (
     PARAMETERS_STAGE,
     CongestionMetrics,
@@ -129,7 +129,7 @@ def _extract_physical(q, warnings) -> PhysicalMetrics:
                 StepEnum.ROUTING,
                 StepEnum.LEGALIZATION,
                 StepEnum.PLACEMENT,
-                StepEnum.CTS,
+                SkippableStepEnum.CTS,
                 StepEnum.POST_FLOORPLAN,
                 StepEnum.SYNTHESIS,
             ],
@@ -150,7 +150,7 @@ def _extract_physical(q, warnings) -> PhysicalMetrics:
             [
                 StepEnum.HARDEN,
                 StepEnum.ROUTING,
-                StepEnum.CTS,
+                SkippableStepEnum.CTS,
                 StepEnum.PLACEMENT,
                 StepEnum.SYNTHESIS,
             ],
@@ -198,7 +198,7 @@ def _extract_physical(q, warnings) -> PhysicalMetrics:
                 StepEnum.ROUTING,
                 StepEnum.LEGALIZATION,
                 StepEnum.PLACEMENT,
-                StepEnum.CTS,
+                SkippableStepEnum.CTS,
                 StepEnum.POST_FLOORPLAN,
                 StepEnum.SYNTHESIS,
             ],
@@ -244,7 +244,7 @@ def _extract_routing(q) -> RoutingMetrics:
         estimated_wirelength_um=q(
             "Routing",
             "Estimated Wirelength",
-            [StepEnum.PLACEMENT, StepEnum.CTS, StepEnum.ROUTING],
+            [StepEnum.PLACEMENT, SkippableStepEnum.CTS, StepEnum.ROUTING],
             [
                 "place_flute_wirelength",
                 "place_grwl",

@@ -11,6 +11,7 @@ from chipcompiler.analysis.qor.summary_contract import (
 )
 from chipcompiler.data import (
     EccStep,
+    SkippableStepEnum,
     StateEnum,
     StepEnum,
     StepMetrics,
@@ -659,7 +660,7 @@ QOR_EXPECTED_METRICS_BY_STEP = {
         "place_rudy_utilization_max",
         "place_lutrudy_utilization_max",
     ],
-    StepEnum.CTS.value: [
+    SkippableStepEnum.CTS.value: [
         "cts_buffer_count",
         "cts_buffer_area",
         "clock_path_max_buffer",
@@ -1496,11 +1497,11 @@ def save_cts_timing_feature_facts(step: WorkspaceStep, timing_quality: dict) -> 
     if feature_path is None:
         return False
     feature = json_read(feature_path)
-    cts = feature.get(StepEnum.CTS.value) if isinstance(feature, dict) else None
+    cts = feature.get(SkippableStepEnum.CTS.value) if isinstance(feature, dict) else None
     cts = cts if isinstance(cts, dict) else {}
     return _save_step_feature_facts(
         step,
-        StepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
         {**cts, "timing_quality": timing_quality},
     )
 
@@ -1806,7 +1807,7 @@ def _metric_scope_and_roles(step: WorkspaceStep, metric_id: str) -> tuple[str, s
     elif step.name == StepEnum.PLACEMENT.value:
         scope = "placement"
         step_role = "primary" if metric_id.startswith("place_") else "secondary"
-    elif step.name == StepEnum.CTS.value:
+    elif step.name == SkippableStepEnum.CTS.value:
         scope = "cts"
         step_role = (
             "primary"
@@ -2982,7 +2983,7 @@ def _gate_state(*, available: bool, passed: bool) -> str:
 _MPC_AREA_SOURCE_STEPS = {
     StepEnum.POST_FLOORPLAN.value,
     StepEnum.PLACEMENT.value,
-    StepEnum.CTS.value,
+    SkippableStepEnum.CTS.value,
     StepEnum.LEGALIZATION.value,
     StepEnum.ROUTING.value,
 }
@@ -3549,7 +3550,7 @@ def build_step_metrics(
             metrics = build_metrics_floorplan(workspace, step)
         case StepEnum.PLACEMENT.value:
             metrics = build_metrics_placement(workspace, step)
-        case StepEnum.CTS.value:
+        case SkippableStepEnum.CTS.value:
             metrics = build_metrics_cts(workspace, step)
         case StepEnum.LEGALIZATION.value:
             metrics = build_metrics_legalization(workspace, step)
@@ -4065,7 +4066,7 @@ def build_metrics_cts(workspace: Workspace, step: EccStep) -> StepMetrics | None
     json_path = getattr(step.feature, "step", "") or ""
     data = json_read(json_path)
     if isinstance(data, dict):
-        cts = data.get(StepEnum.CTS.value, {})
+        cts = data.get(SkippableStepEnum.CTS.value, {})
         cts = cts if isinstance(cts, dict) else {}
         for metric, source_key in (
             ("buffer_num", "buffer_num"),

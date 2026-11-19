@@ -59,7 +59,7 @@ def run_step(
             state = run_placement(workspace=workspace, step=step, ecc_module=ecc_module)
         case SkippableStepEnum.DIFF_OPT.value:
             state = run_diff_opt(workspace=workspace, step=step, ecc_module=ecc_module)
-        case StepEnum.DIFF_SIZING.value:
+        case SkippableStepEnum.DIFF_SIZING.value:
             state = run_diff_sizing(workspace=workspace, step=step, ecc_module=ecc_module)
         case StepEnum.LEGALIZATION.value:
             state = run_legalization(workspace=workspace, step=step, ecc_module=ecc_module)

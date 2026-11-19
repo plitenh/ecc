@@ -310,7 +310,7 @@ def write_step_config(workspace: Workspace, step: EccStep) -> Path:
     explicit_keys.update(internal_buffering_keys)
     if step.name == SkippableStepEnum.DIFF_OPT.value:
         params = prepare_diff_opt_drive_table(workspace, step, apply_diff_opt_defaults(params))
-    elif step.name == StepEnum.DIFF_SIZING.value:
+    elif step.name == SkippableStepEnum.DIFF_SIZING.value:
         params = _apply_diff_sizing_defaults(params, explicit_keys=explicit_keys)
 
     from dreamplace.flows.flow_config import resolve_flow_config
@@ -322,7 +322,7 @@ def write_step_config(workspace: Workspace, step: EccStep) -> Path:
     params = apply_direct_config_overrides(params, parameter_data)
     if step.name == SkippableStepEnum.DIFF_OPT.value:
         params = prepare_diff_opt_drive_table(workspace, step, apply_diff_opt_defaults(params))
-    elif step.name == StepEnum.DIFF_SIZING.value:
+    elif step.name == SkippableStepEnum.DIFF_SIZING.value:
         # Workspace-level placement values (density, padding and routability)
         # are intentionally not shared with the standalone sizing lane.
         params = _apply_diff_sizing_defaults(params, explicit_keys=explicit_keys)

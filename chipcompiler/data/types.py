@@ -39,10 +39,7 @@ class StepEnum(StepBaseEnum):
     PRE_FLOORPLAN = "pre_floorplan"
     MACRO_PLACEMENT = "macro_placement"
     POST_FLOORPLAN = "post_floorplan"
-    PREPLACE = "preplace"
     PLACEMENT = "placement"
-    DIFF_SIZING = "diff_sizing"
-    CTS = "cts"
     LEGALIZATION = "legalization"
     ROUTING = "routing"
     FILLER = "filler"
@@ -70,8 +67,11 @@ class SkippableStepEnum(StepBaseEnum):
     do without.
     """
 
+    PREPLACE = "preplace"
     DIFF_OPT = "diff_opt"
     POST_ROUTE_LEC = "post_route_lec"
+    DIFF_SIZING = "diff_sizing"
+    CTS = "cts"
     TIMING_OPT = "timing_optimization"
 
     def is_skippable(self) -> bool:
@@ -197,7 +197,7 @@ FLOW_STEP_POLICIES: Final[dict[str, FlowStepPolicy]] = {
         uses=_data(DesignState.MACROS_PLACED),
         provides=_data(DesignState.PDN),
     ),
-    StepEnum.PREPLACE.value: FlowStepPolicy(
+    SkippableStepEnum.PREPLACE.value: FlowStepPolicy(
         FlowStepCategory.PNR, requires=_data(DesignState.FLOORPLAN)
     ),
     StepEnum.PLACEMENT.value: FlowStepPolicy(
@@ -211,13 +211,13 @@ FLOW_STEP_POLICIES: Final[dict[str, FlowStepPolicy]] = {
         requires=_data(DesignState.PLACED),
         legality=PlacementLegality.LEGALIZED,
     ),
-    StepEnum.DIFF_SIZING.value: FlowStepPolicy(
+    SkippableStepEnum.DIFF_SIZING.value: FlowStepPolicy(
         FlowStepCategory.PNR,
         requires=_data(DesignState.PLACED),
         legality=PlacementLegality.LEGALIZED,
     ),
     # Inserted clock buffers are left for the legalization step.
-    StepEnum.CTS.value: FlowStepPolicy(
+    SkippableStepEnum.CTS.value: FlowStepPolicy(
         FlowStepCategory.PNR,
         requires=_data(DesignState.PLACED),
         provides=_data(DesignState.CLOCK_TREE),

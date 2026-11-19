@@ -84,8 +84,8 @@ def test_build_flow_range_slices_the_canonical_chain():
     flow = builder_module.build_flow_range("diff_sizing", "routing")
 
     assert [(step, tool) for step, tool, _state in flow] == [
-        (StepEnum.DIFF_SIZING, "dreamplace"),
-        (StepEnum.CTS, "ecc"),
+        (SkippableStepEnum.DIFF_SIZING, "dreamplace"),
+        (SkippableStepEnum.CTS, "ecc"),
         (StepEnum.LEGALIZATION, "dreamplace"),
         (SkippableStepEnum.TIMING_OPT, "sizer"),
         (StepEnum.ROUTING, "ecc"),
@@ -112,8 +112,8 @@ def test_build_flow_range_spans_inclusive_bounds_and_rejects_reverse_ranges():
     ] == [
         StepEnum.PLACEMENT,
         SkippableStepEnum.DIFF_OPT,
-        StepEnum.DIFF_SIZING,
-        StepEnum.CTS,
+        SkippableStepEnum.DIFF_SIZING,
+        SkippableStepEnum.CTS,
     ]
     assert [
         step for step, _tool, _state in builder_module.build_flow_range("sta", "power_analysis")
