@@ -171,6 +171,38 @@ def _design_name(workspace) -> str:
     return parameters.get("design") or parameters.get("Design") or "design"
 
 
+def ppa(command_input, ctx: CommandContext) -> CommandResult:
+    workspace, failure = resolve_loaded_workspace(command_input, ctx)
+    if failure is not None:
+        return failure
+
+    from chipcompiler.analysis.ppa import collect_ppa_rows, serialize_csv
+
+    try:
+        rows = collect_ppa_rows(workspace)
+        content = serialize_csv(rows)
+    except Exception as exc:
+        return CommandResult.err([error_record("report_failed", reason=str(exc))])
+
+    design = _design_name(workspace)
+    extra = {
+        "design": design,
+        "rows": len(rows),
+        "stages": sorted({row.stage.value for row in rows}),
+    }
+    if command_input.output.json:
+        extra["ppa"] = [row.as_tuple() for row in rows]
+
+    return _write_report(
+        "ppa",
+        f"{design}_ppa.csv",
+        content,
+        command_input,
+        ctx,
+        extra=extra,
+    )
+
+
 def summary(command_input, ctx: CommandContext) -> CommandResult:
     workspace, failure = resolve_loaded_workspace(command_input, ctx)
     if failure is not None:
