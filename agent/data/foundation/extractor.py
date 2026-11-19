@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from chipcompiler.data.step.directories import recorded_step_directory
-from chipcompiler.data.types import StepEnum
+from chipcompiler.data.types import SkippableStepEnum, StepEnum
 
 from .grid.canonical_grid import build_gcell_patch_grid, build_patch_grid, resize_nearest
 from .parsers.def_parser import DefData, DefNet, DefTrack, DefWire, parse_def
@@ -716,7 +716,7 @@ class FoundationExtractor:
                 category, key = self._classify_map(csv_path)
                 if category == "ignored" or (
                     category == "congestion"
-                    and stage.name not in {StepEnum.PLACEMENT.value, StepEnum.CTS.value}
+                    and stage.name not in {StepEnum.PLACEMENT.value, SkippableStepEnum.CTS.value}
                 ):
                     continue
                 exact_gcell_map = "gcell_patch_map" in csv_path.parts
@@ -757,7 +757,7 @@ class FoundationExtractor:
         stages: list[StageInfo],
     ) -> None:
         for stage in stages:
-            if stage.name not in {StepEnum.PLACEMENT.value, StepEnum.CTS.value}:
+            if stage.name not in {StepEnum.PLACEMENT.value, SkippableStepEnum.CTS.value}:
                 continue
             existing = raw_maps.get(stage.name, {}).get("congestion", {})
             if existing.get("union"):
@@ -867,7 +867,11 @@ class FoundationExtractor:
         self, stages: list[StageInfo]
     ) -> tuple[Path, list[dict[str, Any]]] | None:
         candidates: list[Path] = []
-        for preferred in (StepEnum.ROUTING.value, StepEnum.CTS.value, StepEnum.PLACEMENT.value):
+        for preferred in (
+            StepEnum.ROUTING.value,
+            SkippableStepEnum.CTS.value,
+            StepEnum.PLACEMENT.value,
+        ):
             candidates.extend(
                 stage.directory
                 / "data"
@@ -2610,7 +2614,7 @@ class FoundationExtractor:
             is_progressive_input_stage = stage in {
                 StepEnum.FLOORPLAN.value,
                 StepEnum.PLACEMENT.value,
-                StepEnum.CTS.value,
+                SkippableStepEnum.CTS.value,
             }
             input_available = is_progressive_input_stage
             if not input_available:
@@ -3023,7 +3027,7 @@ class FoundationExtractor:
         if dreamplace:
             knobs["dreamplace"] = dreamplace
         cts = self._first_config_values(
-            [stage for stage in stages if stage.name == StepEnum.CTS.value],
+            [stage for stage in stages if stage.name == SkippableStepEnum.CTS.value],
             "cts_ecc.json",
             {
                 "router_type": ("router_type",),
@@ -5036,7 +5040,7 @@ class FoundationExtractor:
                         "P3": [
                             StepEnum.FLOORPLAN.value,
                             StepEnum.PLACEMENT.value,
-                            StepEnum.CTS.value,
+                            SkippableStepEnum.CTS.value,
                         ],
                     },
                     "route_completion_mode": route_completion_mode,
@@ -6473,7 +6477,7 @@ def _attach_pin_progressive_metadata(stages: list[StageInfo], pins_dir: Path) ->
                 else "first_observed",
                 "exists_in_prev_stage": previous is not None,
                 "exists_in_place": key in place_keys,
-                "introduced_by_cts": first_stage == StepEnum.CTS.value,
+                "introduced_by_cts": first_stage == SkippableStepEnum.CTS.value,
                 "prev_net": previous.get("identity", {}).get("net") if previous else None,
                 "net_changed_from_prev_stage": (
                     previous.get("identity", {}).get("net") != record.get("identity", {}).get("net")
@@ -6536,7 +6540,7 @@ def _attach_pin_progressive_metadata_in_memory(
                 else "first_observed",
                 "exists_in_prev_stage": previous is not None,
                 "exists_in_place": key in place_keys,
-                "introduced_by_cts": first_stage == StepEnum.CTS.value,
+                "introduced_by_cts": first_stage == SkippableStepEnum.CTS.value,
                 "prev_net": previous.get("identity", {}).get("net") if previous else None,
                 "net_changed_from_prev_stage": (
                     previous.get("identity", {}).get("net") != record.get("identity", {}).get("net")
@@ -6689,7 +6693,7 @@ def _attach_net_progressive_metadata(stages: list[StageInfo], nets_dir: Path) ->
                 else {}
             )
             introduced_by_cts = first in {
-                StepEnum.CTS.value,
+                SkippableStepEnum.CTS.value,
                 "legalization",
                 StepEnum.ROUTING.value,
                 "drc",
@@ -6774,7 +6778,7 @@ def _attach_net_progressive_metadata_in_memory(
                 else {}
             )
             introduced_by_cts = first in {
-                StepEnum.CTS.value,
+                SkippableStepEnum.CTS.value,
                 "legalization",
                 StepEnum.ROUTING.value,
                 "drc",
@@ -8089,7 +8093,7 @@ def _stage_directory_name(stage_name: str) -> str:
         StepEnum.SYNTHESIS.value: "synthesis_yosys",
         StepEnum.FLOORPLAN.value: "floorplan_ecc",
         StepEnum.PLACEMENT.value: "placement_dreamplace",
-        StepEnum.CTS.value: "cts_ecc",
+        SkippableStepEnum.CTS.value: "cts_ecc",
         "legalization": "legalization_dreamplace",
         StepEnum.ROUTING.value: "routing_ecc",
         "drc": "drc_ecc",
@@ -9216,7 +9220,7 @@ def _attach_timing_progressive_metadata(
         StepEnum.SYNTHESIS.value,
         StepEnum.FLOORPLAN.value,
         StepEnum.PLACEMENT.value,
-        StepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
         "legalization",
         StepEnum.ROUTING.value,
         "drc",

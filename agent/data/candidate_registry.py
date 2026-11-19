@@ -3,7 +3,7 @@
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from chipcompiler.data.types import StepEnum
+from chipcompiler.data.types import SkippableStepEnum, StepEnum
 
 from .candidate_artifacts import canonical_json_bytes, sha256_bytes
 
@@ -34,13 +34,24 @@ class CandidateKnob:
 
 def _cts_number(name: str, minimum: float = 0.0, maximum: float | None = None) -> CandidateKnob:
     return CandidateKnob(
-        f"cts.{name}", StepEnum.CTS.value, StepEnum.CTS.value, (name,), "number", minimum, maximum
+        f"cts.{name}",
+        SkippableStepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
+        (name,),
+        "number",
+        minimum,
+        maximum,
     )
 
 
 def _cts_uint(name: str, minimum: int = 1) -> CandidateKnob:
     return CandidateKnob(
-        f"cts.{name}", StepEnum.CTS.value, StepEnum.CTS.value, (name,), "uint", minimum
+        f"cts.{name}",
+        SkippableStepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
+        (name,),
+        "uint",
+        minimum,
     )
 
 
@@ -53,7 +64,7 @@ FLOORPLAN_TARGET_FLOW_STEP = {StepEnum.FLOORPLAN.value: StepEnum.PRE_FLOORPLAN.v
 CANDIDATE_TARGET_BACKENDS: dict[str, CandidateTargetBackend] = {
     StepEnum.FLOORPLAN.value: CandidateTargetBackend("ecc"),
     StepEnum.PLACEMENT.value: CandidateTargetBackend("dreamplace"),
-    StepEnum.CTS.value: CandidateTargetBackend("ecc"),
+    SkippableStepEnum.CTS.value: CandidateTargetBackend("ecc"),
     StepEnum.LEGALIZATION.value: CandidateTargetBackend("dreamplace", "legalization_dreamplace"),
     StepEnum.ROUTING.value: CandidateTargetBackend("ecc"),
     StepEnum.FILLER.value: CandidateTargetBackend(
@@ -223,16 +234,16 @@ CANDIDATE_KNOBS = (
     _cts_uint("max_fanout"),
     CandidateKnob(
         "cts.routing_layer",
-        StepEnum.CTS.value,
-        StepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
         ("routing_layer",),
         "uint_list",
         1,
     ),
     CandidateKnob(
         "cts.buffer_type",
-        StepEnum.CTS.value,
-        StepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
         ("buffer_type",),
         "string_list",
         pdk_attribute="buffers",
@@ -240,30 +251,30 @@ CANDIDATE_KNOBS = (
     _cts_number("char_buf_redundancy_pct"),
     CandidateKnob(
         "cts.force_branch_buffer",
-        StepEnum.CTS.value,
-        StepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
         ("force_branch_buffer",),
         "bool",
     ),
     _cts_number("htree_topology_tolerance"),
     CandidateKnob(
         "cts.enable_analytical_htree",
-        StepEnum.CTS.value,
-        StepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
         ("enable_analytical_htree",),
         "bool",
     ),
     CandidateKnob(
         "cts.enable_sink_clustering",
-        StepEnum.CTS.value,
-        StepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
         ("enable_sink_clustering",),
         "bool",
     ),
     CandidateKnob(
         "cts.max_length",
-        StepEnum.CTS.value,
-        StepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
         ("max_length",),
         "number",
         0.0,
@@ -272,8 +283,8 @@ CANDIDATE_KNOBS = (
     ),
     CandidateKnob(
         "cts.use_netlist",
-        StepEnum.CTS.value,
-        StepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
         ("use_netlist",),
         "string",
         available=False,
@@ -281,8 +292,8 @@ CANDIDATE_KNOBS = (
     ),
     CandidateKnob(
         "cts.net_list",
-        StepEnum.CTS.value,
-        StepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
+        SkippableStepEnum.CTS.value,
         ("net_list",),
         "string_list",
         available=False,

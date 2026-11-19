@@ -43,12 +43,12 @@ CANONICAL_INPUT_EDGES = frozenset(
         (StepEnum.FLOORPLAN.value, StepEnum.SYNTHESIS.value),
         # Legacy single-step floorplan topology and sanctioned resume edges.
         (StepEnum.PLACEMENT.value, StepEnum.FLOORPLAN.value),
-        (StepEnum.CTS.value, StepEnum.PLACEMENT.value),
-        (StepEnum.LEGALIZATION.value, StepEnum.CTS.value),
+        (SkippableStepEnum.CTS.value, StepEnum.PLACEMENT.value),
+        (StepEnum.LEGALIZATION.value, SkippableStepEnum.CTS.value),
         (StepEnum.ROUTING.value, StepEnum.LEGALIZATION.value),
-        (StepEnum.PLACEMENT.value, StepEnum.CTS.value),
+        (StepEnum.PLACEMENT.value, SkippableStepEnum.CTS.value),
         (StepEnum.LEGALIZATION.value, StepEnum.PLACEMENT.value),
-        (StepEnum.CTS.value, StepEnum.LEGALIZATION.value),
+        (SkippableStepEnum.CTS.value, StepEnum.LEGALIZATION.value),
     }
 )
 
