@@ -186,7 +186,10 @@ def _preflight_environment(
 
     if preset is None:
         return None
-    skip = resolve_skip_steps(flow_config)
+    skip = resolve_skip_steps(
+        flow_config,
+        materials={"clock_port": cfg.design_clock_port} if cfg is not None else None,
+    )
     lec_engine = resolve_lec_engine(flow_config)
     insert = resolve_insert_steps(flow_config)
     probes = env_probe.probe_environment(

@@ -1,18 +1,22 @@
 """CLI/config integration for effective no-clock decisions."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+import chipcompiler.data as data_api
 from chipcompiler.cli import main as cli_main
 from chipcompiler.cli.core.types import CommandContext, CommandResult, OutputMode
 from chipcompiler.cli.project.config import (
     ProjectNoClockDecisionResolver,
     load_project_config,
+    to_parameters,
     validate_project_config,
 )
 from chipcompiler.cli.project.effective_config import _attach_no_clock, resolve_effective_config
 from chipcompiler.cli.project.flow_selection import effective_insert_steps, effective_skip_steps
+from chipcompiler.data.workspace.sdc_inputs import SdcInputs
 from chipcompiler.rtl2gds import resolve_skip_steps
 from chipcompiler.rtl2gds.builder import NoClockDecision
 
@@ -130,6 +134,15 @@ def test_no_clock_timing_validation(tmp_path, no_clock, clock, frequency, expect
     assert _timing_errors(cfg) == expected
 
 
+def test_whitespace_clock_is_normalized_for_sdc_consumers(tmp_path):
+    cfg = _load_config(tmp_path, clock="   ")
+
+    assert validate_project_config(cfg) == []
+    parameters = to_parameters(cfg)
+    assert parameters["clock"] == ""
+    assert SdcInputs.from_parameters(parameters).clocks(parameters, "TYP") == ()
+
+
 def test_attach_no_clock_leaves_inference_and_insert_steps_unchanged(tmp_path):
     flow_config = {"insert_steps": ["lec@routing"]}
 
@@ -169,6 +182,41 @@ def test_virgin_project_passes_explicit_no_clock_to_workspace_creation(
     assert rc == 0
     flow_config = flow_mocks.capture["create_kwargs"]["flow_config"]
     assert flow_config["no_clock"] is True
+
+
+@pytest.mark.parametrize("clock", ["", "   "])
+def test_virgin_project_infers_no_clock_through_fresh_run(
+    monkeypatch, create_cli_project, flow_mocks, clock
+):
+    from chipcompiler.rtl2gds import build_rtl2gds_flow
+
+    monkeypatch.setattr("chipcompiler.rtl2gds.builder.build_rtl2gds_flow", build_rtl2gds_flow)
+    create_workspace = data_api.create_workspace
+
+    def create_with_parameters(**kwargs):
+        workspace = create_workspace(**kwargs)
+        workspace.parameters = SimpleNamespace(data={})
+        return workspace
+
+    monkeypatch.setattr(data_api, "create_workspace", create_with_parameters)
+    monkeypatch.setattr("chipcompiler.data.parameter.save_parameter", lambda _parameters: True)
+    project_dir = create_cli_project(freq=0)
+    config_path = Path(project_dir, "ecc.toml")
+    config_path.write_text(
+        config_path.read_text().replace('clock_port = "clk"', f'clock_port = "{clock}"')
+    )
+
+    rc = cli_main.run(["run", "--project", project_dir])
+
+    assert rc == 0
+    (flow,) = flow_mocks.flow.instances
+    step_names = [str(step) for step, _tool, _state in flow.added_steps]
+    assert set(step_names).isdisjoint(_NO_CLOCK_SKIPS)
+    assert flow.workspace.parameters.data["_flow"] == {
+        "preset": "rtl2gds",
+        "no_clock": True,
+        "skip_steps": list(_NO_CLOCK_SKIPS),
+    }
 
 
 def test_effective_config_carries_no_clock_without_losing_inserts(tmp_path, manifest_stubs):

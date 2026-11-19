@@ -395,7 +395,7 @@ def to_parameters(cfg: ProjectConfig) -> dict:
         "pdk": cfg.pdk_name,
         "design": cfg.design_name,
         "top_module": cfg.design_top,
-        "clock": cfg.design_clock_port,
+        "clock": cfg.design_clock_port.strip(),
         "frequency_max": cfg.design_frequency_mhz,
     }
 
