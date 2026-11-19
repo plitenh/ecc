@@ -30,11 +30,20 @@ def effective_skip_steps(cfg: "ProjectConfig", flow_config: FlowConfig | None) -
     """Canonical skipped step names; raises ``ValueError`` for an invalid policy."""
     from chipcompiler.rtl2gds import resolve_skip_steps
 
+    explicit = _explicit_keys(cfg)
+    probe: dict[str, object] = {}
     if flow_config is not None and "skip_steps" in flow_config:
-        return resolve_skip_steps(flow_config)
-    if "flow.skip_steps" in _explicit_keys(cfg):
-        return resolve_skip_steps({"skip_steps": cfg.flow_skip_steps})
-    return resolve_skip_steps(None)
+        probe["skip_steps"] = flow_config["skip_steps"]
+    elif "flow.skip_steps" in explicit:
+        probe["skip_steps"] = cfg.flow_skip_steps
+    if flow_config is not None and "no_clock" in flow_config:
+        probe["no_clock"] = flow_config["no_clock"]
+    elif "flow.no_clock" in explicit:
+        probe["no_clock"] = cfg.flow_no_clock
+    return resolve_skip_steps(
+        probe or None,
+        materials={"clock_port": cfg.design_clock_port},
+    )
 
 
 def effective_insert_steps(cfg: "ProjectConfig", flow_config: FlowConfig | None) -> tuple[str, ...]:

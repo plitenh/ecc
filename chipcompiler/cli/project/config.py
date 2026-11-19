@@ -38,6 +38,9 @@ class ProjectConfig:
     # code default then applies). An explicit declaration wins over the
     # manifest's per-workspace value, like every other key.
     flow_skip_steps: list[str] | None = None
+    # Clockless RTL2GDS mode; presence in _explicit_keys distinguishes an
+    # explicit false from the default, which permits empty-clock inference.
+    flow_no_clock: bool = False
     # Declared [flow] lec_engine spelling; None when the key is absent (the
     # code default engine then applies).
     flow_lec_engine: str | None = None
@@ -72,6 +75,28 @@ class ProjectConfig:
     # (manifest) layer; an explicit value — even an empty/invalid one —
     # stays explicit and faces validation.
     _explicit_keys: frozenset = field(default_factory=frozenset, init=False, repr=False)
+
+
+@dataclass(frozen=True)
+class ProjectNoClockDecisionResolver:
+    """Adapt project config to the canonical no-clock decision resolver."""
+
+    config: ProjectConfig | None
+
+    def resolve(self):
+        from chipcompiler.rtl2gds import resolve_no_clock
+
+        if self.config is None:
+            return resolve_no_clock({})
+        flow = (
+            {"no_clock": self.config.flow_no_clock}
+            if "flow.no_clock" in self.config._explicit_keys
+            else {}
+        )
+        return resolve_no_clock(
+            flow,
+            materials={"clock_port": self.config.design_clock_port},
+        )
 
 
 def load_project_config(config_path: str) -> ProjectConfig:
@@ -124,6 +149,8 @@ def _parse_config(data: dict, config_path: str) -> ProjectConfig:
     insert_steps = flow.get("insert_steps")
     max_parallel_steps = flow.get("max_parallel_steps")
 
+    from chipcompiler.data import coerce_bool_flag
+
     cfg = ProjectConfig(
         design_name=_str(design.get("name", "")),
         design_top=_str(design.get("top", "")),
@@ -140,6 +167,7 @@ def _parse_config(data: dict, config_path: str) -> ProjectConfig:
         pdk_overrides=pdk_overrides,
         flow_preset=_str(flow.get("preset", "")),
         flow_skip_steps=skip_steps,
+        flow_no_clock=coerce_bool_flag(flow.get("no_clock", False)),
         flow_lec_engine=lec_engine,
         flow_insert_steps=insert_steps,
         flow_max_parallel_steps=max_parallel_steps,
@@ -258,12 +286,14 @@ def validate_project_config(cfg: ProjectConfig) -> list[str]:
         errors.append("design.name is required")
     if not cfg.design_top:
         errors.append("design.top is required")
+    no_clock = ProjectNoClockDecisionResolver(cfg).resolve()
     if cfg._timing_input_error:
         errors.append(cfg._timing_input_error)
     else:
-        if not cfg.design_clock_port:
+        requires_timing = bool(cfg.design_clock_port) or not no_clock.enabled
+        if requires_timing and not cfg.design_clock_port:
             errors.append("design.clock_port is required")
-        if cfg.design_frequency_mhz <= 0:
+        if requires_timing and cfg.design_frequency_mhz <= 0:
             errors.append("design.frequency_mhz must be greater than 0")
     if not cfg.pdk_name:
         errors.append("pdk.name is required")
@@ -286,11 +316,19 @@ def validate_project_config(cfg: ProjectConfig) -> list[str]:
     elif cfg.flow_preset not in _supported_flow_presets():
         errors.append(f"unsupported flow.preset: {cfg.flow_preset}")
 
-    if "flow.skip_steps" in cfg._explicit_keys:
+    if cfg._explicit_keys & {"flow.skip_steps", "flow.no_clock"} or no_clock.enabled:
         from chipcompiler.rtl2gds import resolve_skip_steps
 
+        probe: dict = {}
+        if "flow.no_clock" in cfg._explicit_keys:
+            probe["no_clock"] = cfg.flow_no_clock
+        if "flow.skip_steps" in cfg._explicit_keys:
+            probe["skip_steps"] = cfg.flow_skip_steps
         try:
-            resolve_skip_steps({"skip_steps": cfg.flow_skip_steps})
+            resolve_skip_steps(
+                probe or None,
+                materials={"clock_port": cfg.design_clock_port},
+            )
         except ValueError as exc:
             errors.append(str(exc))
 

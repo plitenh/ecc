@@ -108,6 +108,13 @@ def _attach_flow_key(flow_config: dict | None, key: str, value) -> dict | None:
     return flow_config
 
 
+def _attach_no_clock(flow_config: dict | None, *, no_clock_decision) -> dict | None:
+    """Carry an explicit no-clock decision without making inference explicit."""
+    if no_clock_decision.enabled and no_clock_decision.source == "explicit":
+        return _attach_flow_key(flow_config, "no_clock", value=True)
+    return flow_config
+
+
 def declared_lec_engine(cfg) -> str | None:
     """The declared [flow] lec_engine spelling; None when the key is absent."""
     if "flow.lec_engine" in getattr(cfg, "_explicit_keys", frozenset()):
@@ -162,9 +169,13 @@ def resolve_effective_config(
 
     # skip_steps follows the common precedence: an explicit ecc.toml
     # declaration outranks the manifest entry (the base layer).
+    from chipcompiler.cli.project.config import ProjectNoClockDecisionResolver
+
     declared = declared_skip_steps(entry, cfg)
     flow_config = _attach_skip_steps(flow_config, declared)
     flow_config = _attach_lec_engine(flow_config, declared_lec_engine(cfg))
+    no_clock = ProjectNoClockDecisionResolver(cfg).resolve()
+    flow_config = _attach_no_clock(flow_config, no_clock_decision=no_clock)
     flow_config = attach_insert_steps(flow_config, manifest_synthesis_lec(entry, cfg))
     flow_config = attach_insert_steps(flow_config, declared_insert_steps(cfg))
     # Provenance for inspection surfaces: the winning layer's name.
