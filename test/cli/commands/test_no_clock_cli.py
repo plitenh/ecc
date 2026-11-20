@@ -60,11 +60,7 @@ def _load_config(
 
 
 def _timing_errors(cfg):
-    return [
-        error
-        for error in validate_project_config(cfg)
-        if error.startswith(_CLOCK_ERRORS)
-    ]
+    return [error for error in validate_project_config(cfg) if error.startswith(_CLOCK_ERRORS)]
 
 
 @pytest.mark.parametrize(
