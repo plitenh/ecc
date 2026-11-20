@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
@@ -283,7 +284,7 @@ def test_virgin_project_infers_no_clock_through_fresh_run(
     create_workspace = data_api.create_workspace
 
     def create_with_parameters(**kwargs):
-        workspace = create_workspace(**kwargs)
+        workspace = cast(Any, create_workspace(**kwargs))
         workspace.parameters = SimpleNamespace(data={})
         return workspace
 

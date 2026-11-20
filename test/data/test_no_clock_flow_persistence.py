@@ -23,7 +23,7 @@ _NO_CLOCK_SKIPS = [
 def test_build_dynamic_flow_data_infers_no_clock_from_materials():
     flow_data = build_dynamic_flow_data({"preset": "rtl2gds"}, materials={"clock_port": ""})
 
-    step_names = [step["name"] for step in flow_data["steps"]]
+    step_names = [step["name"] for step in flow_data.get("steps", [])]
     assert "synthesis" in step_names
     assert set(step_names).isdisjoint(_NO_CLOCK_SKIPS)
 
