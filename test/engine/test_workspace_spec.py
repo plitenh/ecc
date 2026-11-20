@@ -61,7 +61,10 @@ def test_workspace_spec_discovery_and_validation_are_canonical_and_side_effect_f
     flows = {flow["flowId"]: flow for flow in discovery["flowDefinitions"]}
     rtl2gds = flows["rtl2gds"]
     assert set(rtl2gds["skippableStepIds"]) == {
+        "preplace",
         "diff_opt",
+        "diff_sizing",
+        "cts",
         "post_route_lec",
         "timing_optimization",
     }

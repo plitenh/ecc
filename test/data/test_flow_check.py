@@ -38,17 +38,23 @@ _SKIPPABLE = [member.value for member in SkippableStepEnum]
     list(chain.from_iterable(combinations(_SKIPPABLE, n) for n in range(len(_SKIPPABLE) + 1))),
 )
 def test_skipping_any_skippable_steps_keeps_the_chain_runnable(skipped):
-    assert check_flow(_chain(without=skipped), available=_FROM_RTL) == ()
+    expected = _without_clock_tree_violations() if "cts" in skipped else ()
+
+    assert check_flow(_chain(without=skipped), available=_FROM_RTL) == expected
 
 
-def test_flow_without_clock_tree_runs_on_ideal_clocks():
-    violations = check_flow(_chain(without=("cts",)), available=_FROM_RTL)
-
-    assert violations == (
+def _without_clock_tree_violations():
+    return (
         _warning("routing", DesignState.CLOCK_TREE),
         _warning("sta", DesignState.CLOCK_TREE),
         _warning("power_analysis", DesignState.CLOCK_TREE),
         _warning("harden", DesignState.CLOCK_TREE),
+    )
+
+
+def test_flow_without_clock_tree_runs_on_ideal_clocks():
+    assert check_flow(_chain(without=("cts",)), available=_FROM_RTL) == (
+        _without_clock_tree_violations()
     )
 
 

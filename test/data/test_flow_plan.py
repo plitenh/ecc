@@ -25,7 +25,7 @@ def test_plan_marks_skipped_and_optional_steps():
         steps=(
             PlannedStep("placement", "dreamplace", enabled=True, optional=False),
             PlannedStep("diff_opt", "dreamplace", enabled=False, optional=True),
-            PlannedStep("diff_sizing", "dreamplace", enabled=True, optional=False),
+            PlannedStep("diff_sizing", "dreamplace", enabled=True, optional=True),
         ),
         available=frozenset(
             {
@@ -158,8 +158,8 @@ def test_an_inserted_step_follows_its_step_and_is_enabled_with_it():
         PlannedStep("placement", "dreamplace", enabled=True, optional=False),
         PlannedStep("lec@placement", "kepler_formal", enabled=True, optional=True, inserted=True),
         PlannedStep("diff_opt", "dreamplace", enabled=True, optional=True),
-        PlannedStep("diff_sizing", "dreamplace", enabled=True, optional=False),
-        PlannedStep("cts", "ecc", enabled=False, optional=False),
+        PlannedStep("diff_sizing", "dreamplace", enabled=True, optional=True),
+        PlannedStep("cts", "ecc", enabled=False, optional=True),
         PlannedStep("lec@cts", "kepler_formal", enabled=False, optional=True, inserted=True),
         PlannedStep("legalization", "dreamplace", enabled=True, optional=False),
     )
