@@ -7,6 +7,10 @@ import pytest
 
 import chipcompiler.data as data_api
 from chipcompiler.cli import main as cli_main
+from chipcompiler.cli.command_handlers.project import (
+    _preflight_environment,
+    _preflight_flow_range,
+)
 from chipcompiler.cli.core.types import CommandContext, CommandResult, OutputMode
 from chipcompiler.cli.project.config import (
     ProjectNoClockDecisionResolver,
@@ -22,6 +26,7 @@ from chipcompiler.rtl2gds.builder import NoClockDecision
 
 _DEFAULT_SKIPS = resolve_skip_steps(None)
 _NO_CLOCK_SKIPS = ("preplace", "diff_opt", "diff_sizing", "cts", "timing_optimization")
+_NO_CLOCK_ADDED_SKIPS = frozenset(_NO_CLOCK_SKIPS).difference(_DEFAULT_SKIPS)
 _CLOCK_ERRORS = ("design.clock_port", "design.frequency_mhz")
 
 
@@ -70,6 +75,21 @@ def _timing_errors(cfg):
     return [error for error in validate_project_config(cfg) if error.startswith(_CLOCK_ERRORS)]
 
 
+def _capture_preflight_steps(monkeypatch):
+    captured = []
+
+    def capture(steps):
+        captured.append(
+            tuple(getattr(step, "value", str(step)) for step, _tool, _state in steps)
+        )
+        return ()
+
+    monkeypatch.setattr(
+        "chipcompiler.cli.inspection.env_probe.probe_components_for_steps", capture
+    )
+    return captured
+
+
 @pytest.mark.parametrize(
     ("literal", "clock", "flag", "source", "skips"),
     [
@@ -106,6 +126,66 @@ def test_missing_project_config_does_not_infer_no_clock():
 
 
 @pytest.mark.parametrize(
+    ("clock", "no_clock", "expect_clock_steps"),
+    [
+        ("", None, False),
+        ("   ", None, False),
+        ("clk", None, True),
+        ("", False, True),
+    ],
+)
+def test_preflight_paths_apply_inferred_and_explicit_no_clock(
+    tmp_path, monkeypatch, clock, no_clock, expect_clock_steps
+):
+    literal = None if no_clock is None else str(no_clock).lower()
+    cfg = _load_config(tmp_path, no_clock=literal, clock=clock)
+    captured = _capture_preflight_steps(monkeypatch)
+    flow_config = {"start_step": "synthesis", "end_step": "harden"}
+    if no_clock is not None:
+        flow_config["no_clock"] = no_clock
+
+    assert _preflight_flow_range(flow_config, None, cfg) is None
+    assert _preflight_environment("rtl2gds", None, flow_config, cfg) is None
+    expected = _NO_CLOCK_ADDED_SKIPS if expect_clock_steps else frozenset()
+    assert [set(steps) & _NO_CLOCK_ADDED_SKIPS for steps in captured] == [
+        expected,
+        expected,
+    ]
+
+
+def test_preflight_paths_without_config_keep_no_material_behavior(monkeypatch):
+    captured = _capture_preflight_steps(monkeypatch)
+    flow_config = {"start_step": "synthesis", "end_step": "harden"}
+
+    assert _preflight_flow_range(flow_config, None) is None
+    assert _preflight_environment("rtl2gds", None, flow_config) is None
+    assert [set(steps) & _NO_CLOCK_ADDED_SKIPS for steps in captured] == [
+        _NO_CLOCK_ADDED_SKIPS,
+        _NO_CLOCK_ADDED_SKIPS,
+    ]
+
+
+@pytest.mark.parametrize(
+    ("start_step", "end_step"),
+    [
+        ("preplace", "harden"),
+        ("synthesis", "cts"),
+        ("diff_sizing", "cts"),
+    ],
+    ids=["skipped-start", "skipped-end", "clock-steps-only"],
+)
+def test_no_clock_flow_range_with_skipped_boundaries_degrades_to_no_preflight(
+    tmp_path, monkeypatch, start_step, end_step
+):
+    cfg = _load_config(tmp_path)
+    captured = _capture_preflight_steps(monkeypatch)
+    flow_config = {"start_step": start_step, "end_step": end_step}
+
+    assert _preflight_flow_range(flow_config, None, cfg) is None
+    assert captured == []
+
+
+@pytest.mark.parametrize(
     ("no_clock", "clock", "frequency", "expected"),
     [
         ("true", "", 0, []),
@@ -132,6 +212,19 @@ def test_no_clock_timing_validation(tmp_path, no_clock, clock, frequency, expect
     )
 
     assert _timing_errors(cfg) == expected
+
+
+def test_to_parameters_trims_nonempty_clock_and_requires_frequency(tmp_path):
+    cfg = _load_config(tmp_path, clock=" clk ")
+
+    assert to_parameters(cfg) == {
+        "pdk": "ics55",
+        "design": "gcd",
+        "top_module": "gcd",
+        "clock": "clk",
+        "frequency_max": 0,
+    }
+    assert _timing_errors(cfg) == ["design.frequency_mhz must be greater than 0"]
 
 
 def test_whitespace_clock_is_normalized_for_sdc_consumers(tmp_path):

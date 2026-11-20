@@ -232,7 +232,10 @@ def _preflight_flow_range(flow_config: dict, project: str | None, cfg=None) -> C
         steps = build_flow_range(
             flow_config["start_step"],
             flow_config["end_step"],
-            skip=resolve_skip_steps(flow_config),
+            skip=resolve_skip_steps(
+                flow_config,
+                materials={"clock_port": cfg.design_clock_port} if cfg is not None else None,
+            ),
             lec_engine=resolve_lec_engine(flow_config),
             insert=resolve_insert_steps(flow_config),
         )
