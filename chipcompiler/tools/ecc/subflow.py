@@ -19,7 +19,6 @@ class EccSubFlowEnum(Enum):
     run_placement = "run placement"
     run_diff_opt = "run diff opt"
     run_diff_sizing = "run diff sizing"
-    run_diff_buffering = "run diff buffering"
     run_CTS = "run CTS"
     run_legalization = "run legalization"
     run_routing = "run routing"
@@ -62,22 +61,17 @@ _STAGES: dict[StepBaseEnum, tuple[EccSubFlowEnum, ...]] = {
         EccSubFlowEnum.save_data,
         EccSubFlowEnum.analysis,
     ),
-    StepEnum.DIFF_BUFFERING: (
-        EccSubFlowEnum.load_data,
-        EccSubFlowEnum.run_diff_buffering,
-        EccSubFlowEnum.save_data,
-    ),
     SkippableStepEnum.DIFF_OPT: (
         EccSubFlowEnum.load_data,
         EccSubFlowEnum.run_diff_opt,
         EccSubFlowEnum.save_data,
     ),
-    StepEnum.DIFF_SIZING: (
+    SkippableStepEnum.DIFF_SIZING: (
         EccSubFlowEnum.load_data,
         EccSubFlowEnum.run_diff_sizing,
         EccSubFlowEnum.save_data,
     ),
-    StepEnum.CTS: (
+    SkippableStepEnum.CTS: (
         EccSubFlowEnum.load_data,
         EccSubFlowEnum.run_CTS,
         EccSubFlowEnum.save_data,

@@ -197,7 +197,7 @@ def test_sizer_config_emits_global_routing_layer_rc_file(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize(
     "step_name, rc_mode",
-    [(SkippableStepEnum.TIMING_OPT.value, "1"), (StepEnum.PREPLACE.value, "0")],
+    [(SkippableStepEnum.TIMING_OPT.value, "1"), (SkippableStepEnum.PREPLACE.value, "0")],
 )
 def test_sizer_step_config_writes_ff_hold_pass_from_sta_contract(
     tmp_path, monkeypatch, step_name, rc_mode
@@ -525,9 +525,7 @@ def test_sizer_step_declares_db_geometry_and_keeps_standard_dirs(tmp_path):
     assert step.output.geometry_manifest is not None
     assert step.name == SkippableStepEnum.TIMING_OPT.value
     assert step.directory.name == "timing_optimization_sizer"
-    assert not str(step.directory).endswith(f"{SkippableStepEnum.TIMING_OPT.value}_sizer")
     assert isinstance(step.directory, Path)
-    assert " " not in os.path.basename(str(step.output.def_))
     assert " " not in os.path.basename(str(step.output.verilog))
     assert os.path.basename(str(step.output.def_)) == "gcd_timing_optimization.def.gz"
     assert os.path.basename(str(step.output.verilog)) == "gcd_timing_optimization.v.gz"
@@ -545,15 +543,14 @@ def test_sizer_step_declares_db_geometry_and_keeps_standard_dirs(tmp_path):
     ):
         assert path and os.path.isdir(path)
         assert isinstance(path, Path)
-        assert "Timing optimization_sizer" not in str(path)
 
 
 def test_sizer_step_keeps_caller_input_paths(tmp_path):
     from chipcompiler.tools.ecc_sizer import builder as sizer_builder
 
     workspace = _workspace(tmp_path)
-    input_def = Path(f"{workspace.directory}/Timing optimization_sizer_inputs/input.def")
-    input_verilog = Path(f"{workspace.directory}/Timing optimization_sizer_inputs/input.v")
+    input_def = Path(f"{workspace.directory}/timing_optimization_sizer_inputs/input.def")
+    input_verilog = Path(f"{workspace.directory}/timing_optimization_sizer_inputs/input.v")
     step: Any = sizer_builder.build_step(
         workspace=workspace,
         step_name=SkippableStepEnum.TIMING_OPT.value,
@@ -571,8 +568,8 @@ def test_sizer_step_keeps_caller_output_paths_that_share_old_prefix(tmp_path):
     from chipcompiler.tools.ecc_sizer import builder as sizer_builder
 
     workspace = _workspace(tmp_path)
-    output_def = Path(f"{workspace.directory}/Timing optimization_sizer_outputs/output.def")
-    output_verilog = Path(f"{workspace.directory}/Timing optimization_sizer_outputs/output.v")
+    output_def = Path(f"{workspace.directory}/timing_optimization_sizer_outputs/output.def")
+    output_verilog = Path(f"{workspace.directory}/timing_optimization_sizer_outputs/output.v")
     step: Any = sizer_builder.build_step(
         workspace=workspace,
         step_name=SkippableStepEnum.TIMING_OPT.value,
@@ -722,6 +719,7 @@ def test_sizer_build_step_config_rewrites_legacy_one_stage_subflow(tmp_path, mon
     step.subflow.path.write_text(
         json.dumps(
             {
+                "schema_version": 3,
                 "path": str(step.subflow.path),
                 "steps": [
                     {

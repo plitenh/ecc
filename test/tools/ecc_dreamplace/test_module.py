@@ -7,6 +7,7 @@ from chipcompiler.data import (
     EccData,
     EccStep,
     OriginDesign,
+    SkippableStepEnum,
     StepEnum,
     Workspace,
 )
@@ -57,7 +58,8 @@ def test_run_accepts_only_the_defined_empty_macro_short_circuit(
         def run(self):
             return result
 
-    config_path = tmp_path / "dreamplace_ecc.json"
+    config_path = tmp_path / "step" / "config" / "dreamplace_ecc.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     json_write(config_path, {})
     workspace = Workspace(
         directory=tmp_path / "workspace",
@@ -65,6 +67,7 @@ def test_run_accepts_only_the_defined_empty_macro_short_circuit(
         config={"dreamplace": config_path},
     )
     step = EccStep(
+        directory=tmp_path / "step",
         name=(
             StepEnum.MACRO_PLACEMENT.value
             if mode is DreamplaceRunMode.MACRO_PLACEMENT
@@ -94,7 +97,8 @@ def test_run_accepts_only_the_defined_empty_macro_short_circuit(
 
 
 def test_build_params_preserves_placement_timing_config(tmp_path):
-    config_path = tmp_path / "dreamplace_ecc.json"
+    config_path = tmp_path / "step" / "config" / "dreamplace_ecc.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     json_write(
         config_path,
         {
@@ -116,6 +120,7 @@ def test_build_params_preserves_placement_timing_config(tmp_path):
     result_dir = tmp_path / "data" / "pl"
     step_data = EccData(dir=tmp_path / "data", steps={StepEnum.PLACEMENT.value: result_dir})
     step = EccStep(
+        directory=tmp_path / "step",
         name=StepEnum.PLACEMENT.value,
         data=step_data,
     )
@@ -148,7 +153,8 @@ def test_build_params_preserves_placement_timing_config(tmp_path):
 
 
 def test_build_params_uses_empty_string_for_unset_inputs(tmp_path):
-    config_path = tmp_path / "dreamplace_ecc.json"
+    config_path = tmp_path / "step" / "config" / "dreamplace_ecc.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text("{}", encoding="utf-8")
     workspace = Workspace(
         directory=tmp_path / "workspace",
@@ -157,7 +163,7 @@ def test_build_params_uses_empty_string_for_unset_inputs(tmp_path):
     )
     result_dir = tmp_path / "data" / "pl"
     step_data = EccData(dir=tmp_path / "data", steps={StepEnum.PLACEMENT.value: result_dir})
-    step = EccStep(name=StepEnum.PLACEMENT.value, data=step_data)
+    step = EccStep(directory=tmp_path / "step", name=StepEnum.PLACEMENT.value, data=step_data)
     module = DreamplaceModule(
         workspace=workspace,
         step=step,
@@ -176,7 +182,8 @@ def test_build_params_uses_empty_string_for_unset_inputs(tmp_path):
 
 
 def test_build_params_diff_sizing_uses_standalone_s50_profile(tmp_path, dreamplace_default_config):
-    config_path = tmp_path / "dreamplace_ecc.json"
+    config_path = tmp_path / "step" / "config" / "dreamplace_ecc.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     inherited = dict(
         dreamplace_default_config,
         auto_adjust_bins=1,
@@ -199,8 +206,11 @@ def test_build_params_diff_sizing_uses_standalone_s50_profile(tmp_path, dreampla
     )
     result_dir = tmp_path / "data" / "diff_sizing"
     step = EccStep(
-        name=StepEnum.DIFF_SIZING.value,
-        data=EccData(dir=tmp_path / "data", steps={StepEnum.DIFF_SIZING.value: result_dir}),
+        directory=tmp_path / "step",
+        name=SkippableStepEnum.DIFF_SIZING.value,
+        data=EccData(
+            dir=tmp_path / "data", steps={SkippableStepEnum.DIFF_SIZING.value: result_dir}
+        ),
     )
     module = DreamplaceModule(
         workspace=workspace,
@@ -289,7 +299,8 @@ def test_build_params_resolves_openroad_timing_inputs(tmp_path):
     pdk_root.mkdir()
     rc_tcl = pdk_root / "setRC.tcl"
     rc_tcl.write_text("set_wire_rc -signal -layer MET3\n", encoding="utf-8")
-    config_path = tmp_path / "dreamplace_ecc.json"
+    config_path = tmp_path / "step" / "config" / "dreamplace_ecc.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     json_write(
         config_path,
         {
@@ -311,6 +322,7 @@ def test_build_params_resolves_openroad_timing_inputs(tmp_path):
     workspace.pdk.sdc = tmp_path / "gcd.sdc"
     result_dir = tmp_path / "data" / "pl"
     step = EccStep(
+        directory=tmp_path / "step",
         name=StepEnum.PLACEMENT.value,
         data=EccData(dir=tmp_path / "data", steps={StepEnum.PLACEMENT.value: result_dir}),
     )
@@ -343,7 +355,8 @@ def test_build_params_resolves_openroad_timing_inputs(tmp_path):
 
 
 def test_build_params_accepts_ecc_geometry_only_placement(tmp_path):
-    config_path = tmp_path / "dreamplace_ecc.json"
+    config_path = tmp_path / "step" / "config" / "dreamplace_ecc.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     json_write(config_path, {"place_io_engine": "ecc"})
     workspace = Workspace(
         directory=tmp_path / "workspace",
@@ -351,6 +364,7 @@ def test_build_params_accepts_ecc_geometry_only_placement(tmp_path):
         config={"dreamplace": config_path},
     )
     step = EccStep(
+        directory=tmp_path / "step",
         name=StepEnum.PLACEMENT.value,
         data=EccData(
             dir=tmp_path / "data",
@@ -374,7 +388,8 @@ def test_build_params_accepts_ecc_geometry_only_placement(tmp_path):
 
 
 def test_build_params_resolves_ecc_timing_inputs(tmp_path):
-    config_path = tmp_path / "dreamplace_ecc.json"
+    config_path = tmp_path / "step" / "config" / "dreamplace_ecc.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     json_write(
         config_path,
         {"place_io_engine": "ecc", "with_sta": 1},
@@ -384,7 +399,11 @@ def test_build_params_resolves_ecc_timing_inputs(tmp_path):
         design=OriginDesign(name="gcd"),
         config={"dreamplace": config_path},
     )
-    step = EccStep(name=StepEnum.PLACEMENT.value, data=EccData(dir=tmp_path / "data"))
+    step = EccStep(
+        directory=tmp_path / "step",
+        name=StepEnum.PLACEMENT.value,
+        data=EccData(dir=tmp_path / "data"),
+    )
     module = DreamplaceModule(
         workspace=workspace,
         step=step,
@@ -407,7 +426,8 @@ def test_build_params_resolves_ecc_timing_inputs(tmp_path):
 
 
 def test_build_params_uses_empty_strings_for_missing_inputs(tmp_path):
-    config_path = tmp_path / "dreamplace_ecc.json"
+    config_path = tmp_path / "step" / "config" / "dreamplace_ecc.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     json_write(config_path, {})
     workspace = Workspace(
         directory=tmp_path / "workspace",
@@ -417,6 +437,7 @@ def test_build_params_uses_empty_strings_for_missing_inputs(tmp_path):
     result_dir = tmp_path / "data" / "pl"
     step_data = EccData(dir=tmp_path / "data", steps={StepEnum.PLACEMENT.value: result_dir})
     step = EccStep(
+        directory=tmp_path / "step",
         name=StepEnum.PLACEMENT.value,
         data=step_data,
     )
@@ -437,7 +458,8 @@ def test_build_params_uses_empty_strings_for_missing_inputs(tmp_path):
 
 
 def test_macro_placement_forces_selective_non_routable_placement_params(tmp_path):
-    config_path = tmp_path / "dreamplace_ecc.json"
+    config_path = tmp_path / "step" / "config" / "dreamplace_ecc.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     json_write(
         config_path,
         {
@@ -457,6 +479,7 @@ def test_macro_placement_forces_selective_non_routable_placement_params(tmp_path
         config={"dreamplace": config_path},
     )
     step = EccStep(
+        directory=tmp_path / "step",
         name=StepEnum.MACRO_PLACEMENT.value,
         data=EccData(
             dir=tmp_path / "data",

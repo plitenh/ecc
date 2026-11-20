@@ -11,14 +11,14 @@ from chipcompiler.analysis.qor.summary_contract import (
 )
 from chipcompiler.data import (
     EccStep,
+    SkippableStepEnum,
     StateEnum,
     StepEnum,
     StepMetrics,
-    ToolName,
     Workspace,
     WorkspaceStep,
 )
-from chipcompiler.data.step import step_directory_for_tool
+from chipcompiler.data.step import StepDirectories, recorded_step_directory
 from chipcompiler.tools.ecc.qor_detail_facts import database_fact_summary, lvs_detail_summary
 from chipcompiler.tools.ecc.sta_qor import (
     POST_SYNTHESIS_STA_CORNER,
@@ -660,7 +660,7 @@ QOR_EXPECTED_METRICS_BY_STEP = {
         "place_rudy_utilization_max",
         "place_lutrudy_utilization_max",
     ],
-    StepEnum.CTS.value: [
+    SkippableStepEnum.CTS.value: [
         "cts_buffer_count",
         "cts_buffer_area",
         "clock_path_max_buffer",
@@ -1463,7 +1463,7 @@ def save_rcx_spef_feature_facts(workspace: Workspace, step: WorkspaceStep) -> bo
             len(expected_spef_paths) if expected_spef_paths else len(actual_spef_paths)
         ),
         "missing_corner_count": len(missing_spef_paths),
-        "output_def_exists": _artifact_exists(step.output.def_ or "", output_dir, "*_RCX.def.gz"),
+        "output_def_exists": _artifact_exists(step.output.def_ or "", output_dir, "*_rcx.def.gz"),
         "output_gds_exists": _artifact_exists(
             getattr(step.output, "gds", "") or "", output_dir, "*.gds"
         ),
@@ -1497,11 +1497,11 @@ def save_cts_timing_feature_facts(step: WorkspaceStep, timing_quality: dict) -> 
     if feature_path is None:
         return False
     feature = json_read(feature_path)
-    cts = feature.get("CTS") if isinstance(feature, dict) else None
+    cts = feature.get(SkippableStepEnum.CTS.value) if isinstance(feature, dict) else None
     cts = cts if isinstance(cts, dict) else {}
     return _save_step_feature_facts(
         step,
-        "CTS",
+        SkippableStepEnum.CTS.value,
         {**cts, "timing_quality": timing_quality},
     )
 
@@ -1807,7 +1807,7 @@ def _metric_scope_and_roles(step: WorkspaceStep, metric_id: str) -> tuple[str, s
     elif step.name == StepEnum.PLACEMENT.value:
         scope = "placement"
         step_role = "primary" if metric_id.startswith("place_") else "secondary"
-    elif step.name == StepEnum.CTS.value:
+    elif step.name == SkippableStepEnum.CTS.value:
         scope = "cts"
         step_role = (
             "primary"
@@ -2077,7 +2077,11 @@ def _metric_feature_source(
 
     if metric_id.startswith("power_analysis_"):
         feature_dir = getattr(step.feature, "dir", None)
-        feature_path = Path(feature_dir) / "powerAnalysis.step.json" if feature_dir else None
+        feature_path = (
+            Path(feature_dir) / f"{StepEnum.POWER_ANALYSIS.value}.step.json"
+            if feature_dir
+            else None
+        )
         selector = {
             "power_analysis_internal_uw": "/power_summary/internal_uw",
             "power_analysis_switching_uw": "/power_summary/switching_uw",
@@ -2093,7 +2097,11 @@ def _metric_feature_source(
             "synthesis_power_leakage_uw": "/leakage_uw",
         }.get(metric_id, "")
         if step.name == StepEnum.POWER_ANALYSIS.value:
-            feature_path = Path(feature_dir) / "powerAnalysis.step.json" if feature_dir else None
+            feature_path = (
+                Path(feature_dir) / f"{StepEnum.POWER_ANALYSIS.value}.step.json"
+                if feature_dir
+                else None
+            )
             selector = f"/power_summary{selector}"
         else:
             feature_path = (
@@ -2143,18 +2151,18 @@ def _metric_feature_source(
     }:
         feature_path = getattr(step.feature, "step", None)
         selector = {
-            "clock_path_max_buffer": "/CTS/clock_path_max_buffer",
-            "clock_path_min_buffer": "/CTS/clock_path_min_buffer",
-            "cts_buffer_count": "/CTS/buffer_num",
-            "cts_buffer_area": "/CTS/buffer_area",
-            "clock_wirelength": "/CTS/total_clock_wirelength",
-            "cts_clock_wirelength_max": "/CTS/max_clock_wirelength",
-            "cts_clock_tree_max_level": "/CTS/max_level_of_clock_tree",
-            "cts_worst_optimized_skew_ns": ("/CTS/timing_quality/worst_optimized_skew_ns"),
+            "clock_path_max_buffer": "/cts/clock_path_max_buffer",
+            "clock_path_min_buffer": "/cts/clock_path_min_buffer",
+            "cts_buffer_count": "/cts/buffer_num",
+            "cts_buffer_area": "/cts/buffer_area",
+            "clock_wirelength": "/cts/total_clock_wirelength",
+            "cts_clock_wirelength_max": "/cts/max_clock_wirelength",
+            "cts_clock_tree_max_level": "/cts/max_level_of_clock_tree",
+            "cts_worst_optimized_skew_ns": ("/cts/timing_quality/worst_optimized_skew_ns"),
             "cts_worst_max_insertion_latency_ns": (
-                "/CTS/timing_quality/worst_max_insertion_latency_ns"
+                "/cts/timing_quality/worst_max_insertion_latency_ns"
             ),
-            "cts_skew_target_unmet_count": ("/CTS/timing_quality/target_unmet_count"),
+            "cts_skew_target_unmet_count": ("/cts/timing_quality/target_unmet_count"),
         }.get(metric_id, "")
     elif metric_id in {"route_wirelength", "route_via_count"}:
         feature_path = getattr(step.feature, "db", None)
@@ -2166,12 +2174,12 @@ def _metric_feature_source(
         feature_path = getattr(step.feature, "step", None)
         selector = {
             "drc_count": "/drc/number",
-            "route_dr_total_violation_count": "/route/DR",
-            "route_dr_total_patch_count": "/route/DR",
-            "route_dr_total_wirelength": "/route/DR",
-            "route_dr_total_via_count": "/route/DR",
-            "route_la_total_overflow": "/route/LA",
-            "route_la_total_demand": "/route/LA",
+            "route_dr_total_violation_count": "/routing/DR",
+            "route_dr_total_patch_count": "/routing/DR",
+            "route_dr_total_wirelength": "/routing/DR",
+            "route_dr_total_via_count": "/routing/DR",
+            "route_la_total_overflow": "/routing/LA",
+            "route_la_total_demand": "/routing/LA",
         }.get(metric_id, "")
     elif metric_id == "lvs_count":
         feature_path = getattr(step.feature, "step", None)
@@ -2268,7 +2276,7 @@ def _qor_detail_records(step: WorkspaceStep, step_metrics: StepMetrics) -> list[
                     "kind": "feature",
                     "path": source_path,
                     "selector": (
-                        "/CTS/timing_quality"
+                        "/cts/timing_quality"
                         if detail_id == "cts_clock_skew_metrics"
                         else "/rcx/signoff_metrics"
                         if detail_id == "rcx_electrical_corner_metrics"
@@ -2561,12 +2569,7 @@ def _workspace_step_completed(workspace: Workspace, step_name: str) -> bool:
 
 
 def _harden_signoff_source(workspace: Workspace, source_step: str) -> dict:
-    summary_path = (
-        workspace.directory
-        / step_directory_for_tool(source_step, ToolName.ECC)
-        / "analysis"
-        / "qor_summary.json"
-    )
+    summary_path = StepDirectories.of(workspace).path(source_step) / "analysis" / "qor_summary.json"
     summary = json_read(summary_path)
     available = is_supported_summary(summary) and summary_quality_status(summary) is not None
     hard_gates = summary_gates(summary) if available else []
@@ -2980,7 +2983,7 @@ def _gate_state(*, available: bool, passed: bool) -> str:
 _MPC_AREA_SOURCE_STEPS = {
     StepEnum.POST_FLOORPLAN.value,
     StepEnum.PLACEMENT.value,
-    StepEnum.CTS.value,
+    SkippableStepEnum.CTS.value,
     StepEnum.LEGALIZATION.value,
     StepEnum.ROUTING.value,
 }
@@ -3025,11 +3028,11 @@ def _last_successful_mpc_area_source(workspace: Workspace) -> tuple[float | None
 
     flow_step = candidates[-1]
     step_name = str(flow_step.get("name"))
-    tool = str(flow_step.get("tool") or "ecc")
-    workspace_directory = workspace.directory
-
     feature_path = (
-        Path(workspace_directory) / f"{step_name}_{tool}" / "feature" / (f"{step_name}.db.json")
+        Path(workspace.directory)
+        / recorded_step_directory(flow_step)
+        / "feature"
+        / f"{step_name}.db.json"
     )
     relative_path = _relative_workspace_path(workspace, feature_path)
     source = {
@@ -3521,30 +3524,12 @@ def save_qor_hotspots(workspace: Workspace, step: WorkspaceStep, step_metrics: S
     )
 
 
-def _remove_legacy_step_metric_artifacts(step: WorkspaceStep) -> bool:
-    analysis_dir = step.analysis.dir
-    if analysis_dir is None or analysis_dir == "":
-        return True
-
-    legacy_prefix = f"{step.name}_metrics"
-    try:
-        for suffix in (".json", ".png"):
-            legacy_path = Path(analysis_dir) / f"{legacy_prefix}{suffix}"
-            if legacy_path.is_file():
-                legacy_path.unlink()
-    except OSError:
-        return False
-    return True
-
-
 def save_step_metrics(workspace: Workspace, step: WorkspaceStep, step_metrics: StepMetrics) -> bool:
     if not save_qor_metrics(workspace=workspace, step=step, step_metrics=step_metrics):
         return False
     if not save_qor_summary(workspace=workspace, step=step, step_metrics=step_metrics):
         return False
-    if not save_qor_hotspots(workspace=workspace, step=step, step_metrics=step_metrics):
-        return False
-    return _remove_legacy_step_metric_artifacts(step)
+    return save_qor_hotspots(workspace=workspace, step=step, step_metrics=step_metrics)
 
 
 def build_step_metrics(
@@ -3565,7 +3550,7 @@ def build_step_metrics(
             metrics = build_metrics_floorplan(workspace, step)
         case StepEnum.PLACEMENT.value:
             metrics = build_metrics_placement(workspace, step)
-        case StepEnum.CTS.value:
+        case SkippableStepEnum.CTS.value:
             metrics = build_metrics_cts(workspace, step)
         case StepEnum.LEGALIZATION.value:
             metrics = build_metrics_legalization(workspace, step)
@@ -3777,7 +3762,7 @@ def build_metrics_routing(workspace: Workspace, step: EccStep) -> StepMetrics | 
 
     route_data = json_read(getattr(step.feature, "step", "") or "")
     if isinstance(route_data, dict):
-        route = route_data.get("route", {})
+        route = route_data.get(StepEnum.ROUTING.value, {})
         route = route if isinstance(route, dict) else {}
         metrics["route_layer_metrics"] = _route_layer_metrics(
             route,
@@ -4081,7 +4066,7 @@ def build_metrics_cts(workspace: Workspace, step: EccStep) -> StepMetrics | None
     json_path = getattr(step.feature, "step", "") or ""
     data = json_read(json_path)
     if isinstance(data, dict):
-        cts = data.get("CTS", {})
+        cts = data.get(SkippableStepEnum.CTS.value, {})
         cts = cts if isinstance(cts, dict) else {}
         for metric, source_key in (
             ("buffer_num", "buffer_num"),
@@ -4136,8 +4121,8 @@ def build_metrics_placement(workspace: Workspace, step: EccStep) -> StepMetrics 
     # db summary matrics
     metrics.update(build_metrics_db(workspace, step))
 
-    # Placement congestion and wirelength are emitted through place.map.json.
-    # The old place.step.json overflow/bin fields are not part of the current
+    # Placement congestion and wirelength are emitted through placement.map.json.
+    # The old placement.step.json overflow/bin fields are not part of the current
     # DreamPlace feature contract.
     map_data = json_read(getattr(step.feature, "map", None) or "")
     if isinstance(map_data, dict):

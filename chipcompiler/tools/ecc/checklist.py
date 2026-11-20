@@ -7,6 +7,7 @@ from chipcompiler.data import (
     Checklist,
     CheckState,
     EccStep,
+    SkippableStepEnum,
     StepEnum,
     Workspace,
     workspace_checklist_path,
@@ -24,7 +25,7 @@ class EccChecklist:
             ("Wirelength", "check HPWL"),
             ("Legality", "check cell overlap"),
         ],
-        StepEnum.CTS: [
+        SkippableStepEnum.CTS: [
             ("Clock", "check clock net"),
             ("Buffer", "check CTS buffers"),
             ("Timing", "check clock skew"),
@@ -107,7 +108,7 @@ class EccChecklist:
                 step=step.value,
                 type=type,
                 item=item,
-                state=CheckState.Unstart.value,
+                state=CheckState.UNAVAILABLE,
             )
 
     def set_item_state(self, step: str, type: str, item: str, state: CheckState, info: str = ""):
@@ -161,9 +162,9 @@ class EccChecklist:
     ) -> bool:
         warnings = warnings or set()
         for type, item, success, info in checks:
-            state = CheckState.Passed
+            state = CheckState.PASS
             if not success:
-                state = CheckState.Warning if item in warnings else CheckState.Failed
+                state = CheckState.WARNING if item in warnings else CheckState.FAILED
             self.set_item_state(
                 step=step,
                 type=type,
@@ -182,10 +183,10 @@ class EccCtsChecklist(EccChecklist):
     def check(self) -> bool:
         return refresh_step_checklist(self.workspace, self.workspace_step)
 
-        step = StepEnum.CTS.value
+        step = SkippableStepEnum.CTS.value
         metrics = self.qor_metrics()
         db = json_read(self.workspace_step.feature.db or "")
-        config = json_read(self.workspace.config.get(StepEnum.CTS.value, ""))
+        config = json_read(self.workspace.config.get(SkippableStepEnum.CTS.value, ""))
 
         nets = db.get("Nets", {})
         instances = db.get("Instances", {})
@@ -473,11 +474,11 @@ class EccFillerChecklist(EccChecklist):
                 step=step,
                 type=type,
                 item=item,
-                state=CheckState.Passed if success else CheckState.Failed,
+                state=CheckState.PASS if success else CheckState.FAILED,
                 info="" if success else f"{item} check failed",
             )
 
-        drc_state = CheckState.Warning
+        drc_state = CheckState.WARNING
         self.set_item_state(
             step=step,
             type="Signoff",
