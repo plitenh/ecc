@@ -36,9 +36,7 @@ def test_non_string_clock_material_is_not_a_clock(clock_port):
 
 @pytest.mark.parametrize("materials", [{"clock_port": " clk "}, {"clock": "clk"}])
 def test_clock_name_disables_inference(materials):
-    assert resolve_no_clock({}, materials=materials) == NoClockDecision(
-        enabled=False, source="off"
-    )
+    assert resolve_no_clock({}, materials=materials) == NoClockDecision(enabled=False, source="off")
 
 
 def test_missing_materials_do_not_trigger_inference():
