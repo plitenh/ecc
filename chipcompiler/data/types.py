@@ -1,4 +1,4 @@
-"""Flow step and state vocabulary: enums plus enum-only pure predicates.
+"""Flow configuration vocabulary and dependency-free pure helpers.
 
 Zero IO and zero chipcompiler-internal imports: this module is the
 dependency-free root of the data layer's type vocabulary.
@@ -7,6 +7,17 @@ dependency-free root of the data layer's type vocabulary.
 from dataclasses import KW_ONLY, dataclass
 from enum import StrEnum
 from typing import Final
+
+
+def coerce_bool_flag(value: object) -> bool:
+    """Normalize booleans and common string spellings to a bool."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
 
 
 class FlowStepCategory(StrEnum):

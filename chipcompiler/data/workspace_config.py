@@ -23,6 +23,7 @@ import logging
 import os
 import tempfile
 import tomllib
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,7 @@ from .schema_versions import (
     SUPPORTED_SCHEMA_VERSIONS,
     ensure_supported_schema_version,
 )
+from .types import coerce_bool_flag
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +102,14 @@ def parameters_have_chip_identity(data: object) -> bool:
 
 #: The ``[flow]`` keys that shape the steps of a flow target besides its
 #: preset or range; each rides along wherever the target is persisted.
-FLOW_POLICY_KEYS = ("skip_steps", "lec_engine", "insert_steps")
+FLOW_POLICY_KEYS = ("skip_steps", "lec_engine", "insert_steps", "no_clock")
+
+
+def flow_no_clock(flow: object) -> bool:
+    """Whether a ``[flow]`` section enables no-clock mode."""
+    if not isinstance(flow, dict):
+        return False
+    return coerce_bool_flag(flow.get("no_clock", False))
 
 
 def validate_flow_config(flow: object) -> dict:
@@ -133,11 +142,17 @@ def validate_flow_config(flow: object) -> dict:
         return {}
 
     result: dict = {}
-    if "skip_steps" in section:
+    no_clock = flow_no_clock(section)
+    if no_clock:
+        result["no_clock"] = True
+    if "skip_steps" in section or no_clock:
         from chipcompiler.rtl2gds import resolve_skip_steps
 
+        skip_config = {"skip_steps": section.get("skip_steps", [])}
+        if no_clock:
+            skip_config["no_clock"] = True
         try:
-            result["skip_steps"] = list(resolve_skip_steps({"skip_steps": section["skip_steps"]}))
+            result["skip_steps"] = list(resolve_skip_steps(skip_config))
         except ValueError as exc:
             raise WorkspaceFlowTargetError(f"[flow] {exc}") from None
     if "lec_engine" in section:
@@ -250,7 +265,11 @@ def flow_steps_in_range(start: str, end: str) -> list[str]:
         raise WorkspaceFlowTargetError(f"flow range outside the canonical chain: {exc}") from exc
 
 
-def flow_section_from_flow_config(flow_config: dict | None) -> dict:
+def flow_section_from_flow_config(
+    flow_config: dict | None,
+    *,
+    materials: Mapping[str, object] | None = None,
+) -> dict:
     """Derive the [flow] section (start/end canonical form) from a flow_config.
 
     Uses the same selection resolution as the flow.json seeding, so both
@@ -261,6 +280,13 @@ def flow_section_from_flow_config(flow_config: dict | None) -> dict:
     """
     if not isinstance(flow_config, dict) or not flow_config:
         return {}
+
+    if "no_clock" not in flow_config:
+        from chipcompiler.rtl2gds import resolve_no_clock
+
+        decision = resolve_no_clock(flow_config, materials=materials)
+        if decision.enabled:
+            flow_config = {**flow_config, "no_clock": True}
 
     # A preset-shaped flow_config selects the preset's canonical range.
     if "preset" in flow_config and "start_step" not in flow_config and "steps" not in flow_config:
