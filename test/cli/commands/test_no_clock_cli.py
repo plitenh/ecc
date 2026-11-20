@@ -79,14 +79,10 @@ def _capture_preflight_steps(monkeypatch):
     captured = []
 
     def capture(steps):
-        captured.append(
-            tuple(getattr(step, "value", str(step)) for step, _tool, _state in steps)
-        )
+        captured.append(tuple(getattr(step, "value", str(step)) for step, _tool, _state in steps))
         return ()
 
-    monkeypatch.setattr(
-        "chipcompiler.cli.inspection.env_probe.probe_components_for_steps", capture
-    )
+    monkeypatch.setattr("chipcompiler.cli.inspection.env_probe.probe_components_for_steps", capture)
     return captured
 
 
