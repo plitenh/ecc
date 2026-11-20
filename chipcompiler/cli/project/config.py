@@ -287,11 +287,12 @@ def validate_project_config(cfg: ProjectConfig) -> list[str]:
     if not cfg.design_top:
         errors.append("design.top is required")
     no_clock = ProjectNoClockDecisionResolver(cfg).resolve()
+    clock_port = cfg.design_clock_port.strip()
     if cfg._timing_input_error:
         errors.append(cfg._timing_input_error)
     else:
-        requires_timing = bool(cfg.design_clock_port) or not no_clock.enabled
-        if requires_timing and not cfg.design_clock_port:
+        requires_timing = bool(clock_port) or not no_clock.enabled
+        if requires_timing and not clock_port:
             errors.append("design.clock_port is required")
         if requires_timing and cfg.design_frequency_mhz <= 0:
             errors.append("design.frequency_mhz must be greater than 0")
@@ -394,7 +395,7 @@ def to_parameters(cfg: ProjectConfig) -> dict:
         "pdk": cfg.pdk_name,
         "design": cfg.design_name,
         "top_module": cfg.design_top,
-        "clock": cfg.design_clock_port,
+        "clock": cfg.design_clock_port.strip(),
         "frequency_max": cfg.design_frequency_mhz,
     }
 

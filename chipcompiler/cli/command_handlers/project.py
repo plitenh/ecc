@@ -186,7 +186,10 @@ def _preflight_environment(
 
     if preset is None:
         return None
-    skip = resolve_skip_steps(flow_config)
+    skip = resolve_skip_steps(
+        flow_config,
+        materials={"clock_port": cfg.design_clock_port} if cfg is not None else None,
+    )
     lec_engine = resolve_lec_engine(flow_config)
     insert = resolve_insert_steps(flow_config)
     probes = env_probe.probe_environment(
@@ -229,7 +232,10 @@ def _preflight_flow_range(flow_config: dict, project: str | None, cfg=None) -> C
         steps = build_flow_range(
             flow_config["start_step"],
             flow_config["end_step"],
-            skip=resolve_skip_steps(flow_config),
+            skip=resolve_skip_steps(
+                flow_config,
+                materials={"clock_port": cfg.design_clock_port} if cfg is not None else None,
+            ),
             lec_engine=resolve_lec_engine(flow_config),
             insert=resolve_insert_steps(flow_config),
         )
@@ -786,8 +792,10 @@ def _run_project(
             return CommandResult.err([error_record("missing_config")])
         # Virgin projects have no manifest layer; an ecc.toml skip policy
         # still rides on the flow config (policy-only when no range applies).
+        from chipcompiler.cli.project.config import ProjectNoClockDecisionResolver
         from chipcompiler.cli.project.effective_config import (
             _attach_lec_engine,
+            _attach_no_clock,
             _attach_skip_steps,
         )
         from chipcompiler.cli.project.manifest_flow import (
@@ -807,6 +815,8 @@ def _run_project(
             else None
         )
         flow_config = _attach_lec_engine(flow_config, lec_engine)
+        no_clock_decision = ProjectNoClockDecisionResolver(cfg).resolve()
+        flow_config = _attach_no_clock(flow_config, no_clock_decision=no_clock_decision)
         flow_config = attach_insert_steps(flow_config, declared_insert_steps(cfg))
 
     if cfg is None:

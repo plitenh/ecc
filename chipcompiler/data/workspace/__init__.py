@@ -778,10 +778,17 @@ def create_workspace(
     # skips) is an error, never a partial workspace.
     from chipcompiler.rtl2gds import resolve_insert_steps, resolve_lec_engine, resolve_skip_steps
 
-    resolve_skip_steps(flow_config)
+    if isinstance(parameters, Parameters):
+        materials = {"clock_port": parameters.data.get("clock", "")}
+    elif isinstance(parameters, dict):
+        materials = {"clock_port": parameters.get("clock", "")}
+    else:
+        materials = None
+
+    resolve_skip_steps(flow_config, materials=materials)
     resolve_lec_engine(flow_config)
     resolve_insert_steps(flow_config)
-    dynamic_flow_data = build_dynamic_flow_data(flow_config)
+    dynamic_flow_data = build_dynamic_flow_data(flow_config, materials=materials)
 
     # create workspace directory
     import shutil
@@ -876,7 +883,7 @@ def create_workspace(
         sync_flow_options_projection(workspace)
         from ..workspace_config import flow_section_from_flow_config
 
-        flow_section = flow_section_from_flow_config(flow_config)
+        flow_section = flow_section_from_flow_config(flow_config, materials=materials)
         if flow_section:
             workspace.parameters.data["_flow"] = flow_section
 
