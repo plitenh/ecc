@@ -5,12 +5,13 @@
 { pkgs, ... }:
 
 let
-  inherit (pkgs) lit jq writeShellApplication symlinkJoin coreutils findutils gawk gnused;
+  inherit (pkgs) lit jq writeShellApplication symlinkJoin coreutils findutils gawk gnused python3;
 
   filecheck = pkgs.llvmPackages_21.libllvm;
 
   exportCsvSh = ./export/signoff_package.sh;
   signoffCsvExportSh = ./export/signoff_csv.sh;
+  frequencyModelPy = ./export/frequency_model.py;
   signoffCsvFixtureSh = ./lit/signoff/fixture.sh;
   signoffLitSh = ./lit/signoff/run.sh;
 
@@ -42,10 +43,12 @@ let
       findutils
       gawk
       gnused
+      python3
     ];
     text = ''
       root="''${ECC_REPO_ROOT:-$PWD}"
       export ECC_REPO_ROOT="$root"
+      export ECC_FREQUENCY_MODEL="''${ECC_FREQUENCY_MODEL:-${frequencyModelPy}}"
       exec bash ${signoffCsvExportSh} "$@"
     '';
   };
