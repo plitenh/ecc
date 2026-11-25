@@ -9,10 +9,10 @@ let
 
   filecheck = pkgs.llvmPackages_21.libllvm;
 
-  exportCsvSh = ./scripts/export-signoff-csv.sh;
-  signoffCsvExportSh = ./scripts/signoff_csv/export.sh;
-  signoffCsvFixtureSh = ./scripts/signoff-csv-fixture.sh;
-  signoffLitSh = ./scripts/signoff-lit.sh;
+  exportCsvSh = ./export/signoff_package.sh;
+  signoffCsvExportSh = ./export/signoff_csv.sh;
+  signoffCsvFixtureSh = ./lit/signoff/fixture.sh;
+  signoffLitSh = ./lit/signoff/run.sh;
 
   signoff-lit = writeShellApplication {
     name = "signoff-lit";

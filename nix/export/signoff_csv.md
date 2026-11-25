@@ -13,8 +13,8 @@ workspace already produces:
 - `harden_ecc/output/<design>_harden.{gds,lef,lib}`
 - the golden/gate netlists referenced by the selected LEC result
 
-The collector is implemented in shell (`export.sh`) with `jq`; the
-CI-only deterministic workspace fixture is `nix/scripts/signoff-csv-fixture.sh`
+The collector is implemented in shell (`signoff_csv.sh`) with `jq`; the
+CI-only deterministic workspace fixture is `nix/lit/signoff/fixture.sh`
 and is exposed as the `.#signoff-csv-fixture` flake package.
 
 ## Exported views
@@ -31,7 +31,7 @@ and is exposed as the `.#signoff-csv-fixture` flake package.
 
 This is a collector skeleton, not a signoff gate:
 
-- Collector tests use the deterministic `nix/scripts/signoff-csv-fixture.sh` fixture without running real EDA tools;
+- Collector tests use the deterministic `nix/lit/signoff/fixture.sh` fixture without running real EDA tools;
   the integrated CI summary reads CSV products from the packaged E2E workspaces.
 - The STA check currently verifies row presence only; it does not enforce `WNS >= 0` or `TNS == 0`.
 - The DRC check requires both `drc_count` presence and `qor.drc.clean == pass`.
@@ -99,7 +99,7 @@ Negative-path coverage lives in `.github/scripts/signoff-csv-test.sh` and runs i
 ## CLI
 
 ```bash
-bash nix/scripts/signoff_csv/export.sh \
+bash nix/export/signoff_csv.sh \
   --workspace /path/to/workspace \
   --out-dir /path/to/signoff_csv
 ```
