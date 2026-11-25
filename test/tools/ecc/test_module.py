@@ -1572,7 +1572,7 @@ def test_sta_target_frequency_rejects_invalid_native_values(tmp_path, raw_value)
         ),
         encoding="utf-8",
     )
-    step = SimpleNamespace(
+    step: Any = SimpleNamespace(
         name=StepEnum.STA.value,
         directory=tmp_path,
         feature=SimpleNamespace(step=feature_path),
@@ -1589,7 +1589,7 @@ def test_sta_target_frequency_is_not_emitted_for_other_steps(tmp_path):
         ),
         encoding="utf-8",
     )
-    step = SimpleNamespace(
+    step: Any = SimpleNamespace(
         name=StepEnum.ROUTING.value,
         directory=tmp_path,
         feature=SimpleNamespace(step=feature_path),
@@ -1624,6 +1624,7 @@ def test_ecc_metrics_extract_sta_multi_corner_summary(tmp_path):
         input_verilog=tmp_path / "input.v",
     )
     build_step_space(step)
+    assert step.feature.step is not None
     step.feature.step.write_text(
         json.dumps(
             {"constraints": {"sdc": {"availability": "available", "target_frequency_mhz": 800}}}
